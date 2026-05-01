@@ -1,4 +1,5 @@
-import { defineStore, ref, computed } from 'pinia'
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
 
 function persistWishlist(items) {
   uni.setStorageSync('wishlist', JSON.stringify(items))

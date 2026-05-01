@@ -11,14 +11,11 @@
       <view v-else class="image-placeholder" :class="'placeholder-' + (category?.id || 'default')">
         <text class="placeholder-text">{{ categoryEmoji }}</text>
       </view>
-      <view v-if="category" class="category-tag">
-        <text>{{ category.emoji }}</text>
-      </view>
     </view>
     <view class="card-content">
       <text class="card-title">{{ product.title }}</text>
       <view class="card-footer">
-        <text class="card-tags">{{ (product.tags || []).slice(0, 2).join(' · ') }}</text>
+        <text class="card-tags">{{ tagText }}</text>
       </view>
     </view>
   </view>
@@ -37,6 +34,11 @@ const props = defineProps({
 
 const emit = defineEmits(['click'])
 
+const tagText = computed(() => {
+  const tags = props.product?.tags
+  if (!tags || !Array.isArray(tags)) return ''
+  return tags.slice(0, 2).join(' · ')
+})
 const imageError = ref(false)
 const hasImage = computed(() =>
   props.product.images && props.product.images.length > 0 && !imageError.value

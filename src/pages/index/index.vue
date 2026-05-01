@@ -43,10 +43,6 @@
             <image class="category-icon-img" :src="'/static/images/cat-' + cat.id + '.png'" mode="aspectFit" />
             <text class="category-name">{{ cat.name }}</text>
           </view>
-          <view class="category-item" @click="selectCategory(0)">
-            <view class="category-icon-text">🎁</view>
-            <text class="category-name">全部</text>
-          </view>
         </view>
       </view>
 
@@ -80,7 +76,7 @@
         </view>
         <view class="creators-wrap">
           <CreatorCard
-            v-for="creator in creators.slice(0, 3)"
+            v-for="creator in topCreators"
             :key="creator.id"
             :creator="creator"
           />
@@ -132,6 +128,17 @@ const hotProducts = ref([])
 const newProducts = ref([])
 const creators = ref([])
 
+const topCreators = computed(() =>
+  [...creators.value]
+    .sort((a, b) => {
+      if ((b.worksCount || 0) !== (a.worksCount || 0)) {
+        return (b.worksCount || 0) - (a.worksCount || 0)
+      }
+      return (b.followers || 0) - (a.followers || 0)
+    })
+    .slice(0, 3)
+)
+
 const bannerGradients = [
   'linear-gradient(135deg, #E8D5BC 0%, #D5C4A8 100%)',
   'linear-gradient(135deg, #D5E8D4 0%, #B8D4B6 100%)',
@@ -139,16 +146,16 @@ const bannerGradients = [
 ]
 
 const hotProductsLeft = computed(() =>
-  hotProducts.value.filter((_, i) => i % 2 === 0)
+  hotProducts.value.slice(0, 6).filter((_, i) => i % 2 === 0)
 )
 const hotProductsRight = computed(() =>
-  hotProducts.value.filter((_, i) => i % 2 === 1)
+  hotProducts.value.slice(0, 6).filter((_, i) => i % 2 === 1)
 )
 const newProductsLeft = computed(() =>
-  newProducts.value.filter((_, i) => i % 2 === 0)
+  newProducts.value.slice(0, 6).filter((_, i) => i % 2 === 0)
 )
 const newProductsRight = computed(() =>
-  newProducts.value.filter((_, i) => i % 2 === 1)
+  newProducts.value.slice(0, 6).filter((_, i) => i % 2 === 1)
 )
 
 async function onRefresh() {

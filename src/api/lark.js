@@ -149,7 +149,11 @@ export async function getCategories() {
 
 export async function getCategoryDetails(cateId) {
   const all = await fetchAllRecords(TABLE_IDS.categoryDets)
-  return all.filter(r => r.fields?.cate_id === cateId || r.fields?.cateId === cateId)
+  return all.filter(r => {
+    const fields = r.fields
+    const fieldCateId = parseInt(fields?.cateId || fields?.cate_id || fields?.CATE_ID || '0')
+    return fieldCateId === cateId
+  })
 }
 
 export async function getCreators() {

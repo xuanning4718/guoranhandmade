@@ -1,3 +1,16 @@
+function parseArrayField(value) {
+  if (!value) return []
+  if (Array.isArray(value)) return value
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) return parsed
+    } catch {}
+    return value.split(/[,\n]/).map(s => s.trim()).filter(Boolean)
+  }
+  return [value]
+}
+
 function getField(record, ...keys) {
   if (!record) return null
   for (const key of keys) {
@@ -49,15 +62,17 @@ export function mapProduct(record) {
     return null
   }).filter(Boolean)
 
-  const detId = getField(record, 'DET_ID', 'det_id', 'Det_Id', 'detId')
+  const detId = getField(record, 'det_id', 'DET_ID', 'Det_Id', 'detId')
+  const rawTags = getField(record, 'tags', '标签')
+  const tags = parseArrayField(rawTags)
 
   return {
     id: parseInt(getField(record, 'id', '文本') || '0'),
     title: getField(record, 'title', '名称') || '',
     description: getField(record, 'description', '描述') || '',
     images: imageStrings,
-    tags: getField(record, 'tags', '标签') || [],
-    category: parseInt(getField(record, 'category', '分类') || '0'),
+    tags,
+    category: parseInt(getField(record, 'category_id', 'category', '分类') || '0'),
     detId: detId ? parseInt(detId) : null,
     creatorId: parseInt(getField(record, 'creator_id', 'creatorId') || '0'),
     price: parseFloat(getField(record, 'price', '价格') || '0'),
@@ -81,10 +96,10 @@ export function mapCategory(record) {
 
 export function mapCategoryDetail(record) {
   return {
-    cateId: parseInt(getField(record, 'cate_id') || '0'),
-    detId: parseInt(getField(record, 'det_id') || '0'),
-    detName: getField(record, 'det_name') || '',
-    sortNo: parseInt(getField(record, 'sort_no') || '0')
+    cateId: parseInt(getField(record, 'cateId', 'cate_id', 'CATE_ID') || '0'),
+    detId: parseInt(getField(record, 'detId', 'det_id', 'DET_ID') || '0'),
+    detName: getField(record, 'detName', 'det_name', 'DET_NAME') || '',
+    sortNo: parseInt(getField(record, 'sortNo', 'sort_no', 'SORT_NO') || '0')
   }
 }
 

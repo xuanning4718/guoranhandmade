@@ -28,7 +28,7 @@
     {
       "path": "pages/product/product",
       "style": {
-        "navigationBarTitleText": "商品详情"
+        "navigationBarTitleText": "作品详情"
       }
     },
     {

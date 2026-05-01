@@ -58,8 +58,22 @@
       </view>
 
       <view class="detail-section">
-        <text class="section-title">商品详情</text>
+        <text class="section-title">作品详情</text>
         <text class="product-description">{{ product.description }}</text>
+        <view v-if="product.createdAt" class="created-time">
+          <text class="time-label">上架时间</text>
+          <text class="time-value">{{ formatDate(product.createdAt) }}</text>
+        </view>
+        <view v-if="product.images.length > 0" class="detail-images">
+          <image
+            v-for="(img, idx) in product.images"
+            :key="idx"
+            class="detail-image"
+            :src="img"
+            mode="widthFix"
+            @click="previewImage(img)"
+          />
+        </view>
       </view>
 
       <view class="comment-section">
@@ -90,8 +104,8 @@
                 <text class="reply-text">回复</text>
               </view>
               <view class="like-trigger" @click="toggleLike(rootComment.id)">
-                <text v-if="likedComments[rootComment.id]" class="like-count">{{ rootComment.likes + 1 }}</text>
-                <text v-else class="like-count">{{ rootComment.likes || '' }}</text>
+                <text v-if="likedComments[rootComment.id]" class="like-count">{{ (rootComment.likes || 0) + 1 }}</text>
+                <text v-else class="like-count">{{ rootComment.likes > 0 ? rootComment.likes : '' }}</text>
                 <image class="footer-icon" :src="likedComments[rootComment.id] ? '/static/images/good-active.png' : '/static/images/good.png'" mode="aspectFit" />
               </view>
             </view>
@@ -117,25 +131,28 @@
       </view>
     </scroll-view>
 
-    <view class="action-bar">
-      <view class="action-left">
-        <view class="action-item" @click="addToWishlist">
-          <text v-if="wishlistCount > 0" class="icon-text active">♥</text>
-          <text v-else class="icon-text">♡</text>
-          <text class="action-text">意愿</text>
-        </view>
+      <view class="action-bar">
         <view class="action-item" @click="toggleFavorite">
           <text v-if="isFavorited" class="icon-text active">♥</text>
           <text v-else class="icon-text">♡</text>
           <text class="action-text">收藏</text>
         </view>
+        <view class="action-item" @click="goWishlist">
+          <view class="icon-wrap">
+            <image class="action-icon-img" :class="{ 'icon-active': wishlistCount > 0 }" src="/static/images/tab-cart.png" mode="aspectFit" />
+            <view v-if="wishlistCount > 0" class="badge">
+              <text class="badge-text">{{ wishlistCount }}</text>
+            </view>
+          </view>
+          <text class="action-text" :class="{ 'text-active': wishlistCount > 0 }">意愿</text>
+        </view>
+        <button class="action-btn" @click="addToWishlist">加入意愿</button>
+        <button class="action-btn" @click="contactCreator">立即联系</button>
       </view>
-      <button class="buy-btn" @click="addToWishlist">加入意愿</button>
-    </view>
 
     <!-- Comment modal -->
-    <view v-if="showComment" class="form-mask" @click="closeComment">
-      <view class="form-panel" @click.stop>
+    <view v-if="showComment" class="form-mask" @tap="closeComment">
+      <view class="form-panel" catchtap>
         <view class="form-header">
           <text class="form-title">写评价</text>
           <view class="form-close" @click="closeComment">
@@ -180,7 +197,6 @@ const productId = ref(0)
 const currentImage = ref(0)
 const imgFailed = ref({})
 const comments = ref([])
-const favoritedIds = ref([])
 const showComment = ref(false)
 const commentText = ref('')
 const replyingTo = ref(null)
@@ -258,10 +274,6 @@ function creatorAvatarColorById(id) {
 function getUserName(id) {
   const c = comments.value.find(c => c.id === id)
   return c ? c.userName : ''
-}
-
-function isFavorited(id) {
-  return favoritedIds.value.includes(id)
 }
 
 function onImageChange(e) {
@@ -367,6 +379,17 @@ function previewImage(url) {
   uni.previewImage({ urls: [url] })
 }
 
+function formatDate(value) {
+  if (!value) return ''
+  const ts = typeof value === 'string' && /^\d+$/.test(value) ? parseInt(value) : value
+  const date = typeof ts === 'number' && ts > 1e10 ? new Date(ts) : new Date(ts)
+  if (isNaN(date.getTime())) return String(value)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 function addToWishlist() {
   if (!product.value) return
   wishlistStore.addItem({
@@ -376,6 +399,10 @@ function addToWishlist() {
     addedAt: new Date().toLocaleDateString('zh-CN')
   })
   uni.showToast({ title: '已加入意愿', icon: 'success' })
+}
+
+function goWishlist() {
+  uni.switchTab({ url: '/pages/cart/cart' })
 }
 
 function toggleFavorite() {
@@ -637,6 +664,43 @@ onMounted(() => {
   color: #666;
   line-height: 1.8;
   display: block;
+  margin-bottom: 24rpx;
+}
+
+.created-time {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  margin-bottom: 24rpx;
+  border-top: 1rpx solid #f0ebe3;
+  border-bottom: 1rpx solid #f0ebe3;
+}
+
+.time-label {
+  font-size: 22rpx;
+  color: #999;
+  margin-right: 16rpx;
+}
+
+.time-value {
+  font-size: 22rpx;
+  color: #666;
+}
+
+.detail-images {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.detail-image {
+  width: 100%;
+  border-radius: 8px;
+  background: #faf7f2;
+}
+
+.detail-image:active {
+  opacity: 0.8;
 }
 
 .comment-section {
@@ -829,25 +893,57 @@ onMounted(() => {
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
+  gap: 16rpx;
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
-}
-
-.action-left {
-  display: flex;
-  gap: 24rpx;
-  margin-right: 24rpx;
 }
 
 .action-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 80rpx;
+}
+
+.action-icon-img {
+  width: 44rpx;
+  height: 44rpx;
+  margin-bottom: 4rpx;
+}
+
+.action-icon-img.icon-active {
+  filter: brightness(0) saturate(100%) invert(52%) sepia(82%) saturate(1463%) hue-rotate(348deg) brightness(96%) contrast(96%);
+}
+
+.icon-wrap {
+  position: relative;
+  margin-bottom: 4rpx;
+}
+
+.badge {
+  position: absolute;
+  top: -8rpx;
+  right: -16rpx;
+  background: #e64340;
+  border-radius: 20rpx;
+  min-width: 28rpx;
+  height: 28rpx;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  padding: 0 6rpx;
+}
+
+.badge-text {
+  font-size: 18rpx;
+  color: #fff;
+  line-height: 1;
 }
 
 .icon-text {
   font-size: 44rpx;
   color: #666;
+  display: block;
+  text-align: center;
   line-height: 1;
   margin-bottom: 4rpx;
 }
@@ -859,6 +955,27 @@ onMounted(() => {
 .action-text {
   font-size: 20rpx;
   color: #666;
+}
+
+.action-text.text-active {
+  color: #e64340;
+}
+
+.action-btn {
+  flex: 1;
+  background: #4a6741;
+  color: #fff;
+  border-radius: 40rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  font-size: 26rpx;
+  border: none;
+  padding: 0 16rpx;
+  margin: 0;
+}
+
+.action-btn::after {
+  border: none;
 }
 
 .buy-btn {

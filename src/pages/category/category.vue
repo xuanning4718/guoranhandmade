@@ -60,6 +60,7 @@
         :scroll-into-view="scrollTarget"
         scroll-with-animation
         @scrolltolower="loadMore"
+        @scroll="onScroll"
         :lower-threshold="100"
       >
         <block v-if="subCategories.length > 0">
@@ -67,10 +68,10 @@
             v-for="sub in subCategories"
             :key="sub.detId"
             :id="'group-' + sub.detId"
+            v-show="activeDet === 0 || activeDet === sub.detId"
             class="sub-group"
-            :hidden="selectedDet !== 0 && selectedDet !== sub.detId"
           >
-            <view class="sub-header">
+            <view class="sub-header" :id="'sub-' + sub.detId">
               <text class="sub-name">{{ sub.detName }}</text>
               <text class="sub-count">({{ getProductsByDetId(sub.detId).length }})</text>
             </view>
@@ -141,6 +142,8 @@ const hasMore = ref(true)
 const isLoading = ref(false)
 const scrollTarget = ref('')
 const scrollInto = ref('')
+const activeDet = ref(0)
+let scrollTimeout = null
 
 const sortLabels = {
   default: '推荐',
@@ -166,11 +169,14 @@ async function loadSubCategories() {
     return
   }
   subCategories.value = result.data
+  activeDet.value = result.data[0]?.detId || 0
   selectedDet.value = result.data[0]?.detId || 0
 }
 
 async function loadProducts(isLoadMore = false) {
-  if (isLoading.value) return
+  if (isLoading.value) {
+    return
+  }
   isLoading.value = true
 
   const hasSub = subCategories.value.length > 0
@@ -187,6 +193,9 @@ async function loadProducts(isLoadMore = false) {
   }
 
   const result = await getProducts(query)
+  let sampleProducts = result.data.slice(0, 2).map(p => ({ id: p.id, title: p.title, category: p.category, detId: p.detId }))
+  console.log('[category] loadProducts result:', result.data.length, 'samples:', JSON.stringify(sampleProducts))
+
   if (result.data.length < 20) {
     hasMore.value = false
   }
@@ -202,7 +211,34 @@ function selectCategory(id) {
 
 function selectSubCategory(detId) {
   selectedDet.value = detId
-  scrollInto.value = 'sub-' + detId
+  activeDet.value = detId
+  scrollTarget.value = 'sub-' + detId
+}
+
+function onScroll(e) {
+  if (scrollTimeout) return
+  scrollTimeout = setTimeout(() => {
+    scrollTimeout = null
+  }, 200)
+
+  const scrollTop = e.detail.scrollTop
+  if (subCategories.value.length === 0) return
+
+  const query = uni.createSelectorQuery()
+  for (const sub of subCategories.value) {
+    query.select('#sub-' + sub.detId).boundingClientRect()
+  }
+  query.exec(res => {
+    if (!res || res.length === 0) return
+    for (let i = 0; i < subCategories.value.length; i++) {
+      if (res[i] && res[i].top - scrollTop < 120) {
+        if (selectedDet.value !== subCategories.value[i].detId) {
+          selectedDet.value = subCategories.value[i].detId
+        }
+        break
+      }
+    }
+  })
 }
 
 function changeSort(sort) {
@@ -224,7 +260,18 @@ function showSortPicker() {
 }
 
 function getProductsByDetId(detId) {
-  return products.value.filter(p => p.detId === detId)
+  if (detId == null) return []
+  const numDetId = typeof detId === 'string' ? parseInt(detId) : detId
+  const matchedProducts = products.value.filter(p => {
+    if (p.detId == null || p.detId === undefined) return false
+    const pDetId = typeof p.detId === 'string' ? parseInt(p.detId) : p.detId
+    return pDetId === numDetId
+  })
+  // 如果没有匹配到任何产品，说明飞书商品表的 det_id 字段未填，返回该分类下的所有产品
+  if (matchedProducts.length === 0) {
+    return products.value
+  }
+  return matchedProducts
 }
 
 function getProductsByDetIdSplit(detId, col) {

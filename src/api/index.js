@@ -62,7 +62,8 @@ async function getCategoriesFallback() {
 }
 
 async function getCategoryDetailsFallback(cateId) {
-  const details = mockCategoryDetails.filter(d => d.cateId === cateId)
+  const numId = typeof cateId === 'string' ? parseInt(cateId) : cateId
+  const details = mockCategoryDetails.filter(d => d.cateId === numId)
   return { code: 0, data: details }
 }
 
@@ -93,13 +94,16 @@ export async function getProducts(query = {}) {
     let result = filtered
 
     if (query.category) {
-      result = result.filter(p => p.categoryId === query.category)
+      const catId = typeof query.category === 'string' ? parseInt(query.category) : query.category
+      result = result.filter(p => p.category === catId)
     }
     if (query.detId) {
-      result = result.filter(p => p.detId === query.detId)
+      const detId = typeof query.detId === 'string' ? parseInt(query.detId) : query.detId
+      result = result.filter(p => p.detId === detId)
     }
     if (query.creatorId) {
-      result = result.filter(p => p.creatorId === query.creatorId)
+      const cId = typeof query.creatorId === 'string' ? parseInt(query.creatorId) : query.creatorId
+      result = result.filter(p => p.creatorId === cId)
     }
     if (query.keyword) {
       const kw = query.keyword.toLowerCase()
@@ -146,11 +150,13 @@ export async function getNewProducts() {
 }
 
 export async function getProductById(id) {
+  const numId = typeof id === 'string' ? parseInt(id) : id
   try {
     const products = await larkGetProducts()
     const record = products.find(r => {
       const fields = r.fields
-      return fields?.id === id || fields?.text === String(id)
+      const recordId = parseInt(fields?.id || fields?.文本 || '0')
+      return recordId === numId
     })
 
     if (!record) throw new Error('Product not found')
@@ -159,12 +165,16 @@ export async function getProductById(id) {
     product.images = await convertCloudImages(product.images)
 
     const creators = await larkGetCreators()
-    const creatorRecord = creators.find(r => r.fields?.id === product.creatorId || r.fields?.name && product.creatorId > 0)
+    const creatorRecord = creators.find(r => {
+      const fields = r.fields
+      const creatorId = parseInt(fields?.id || '0')
+      return creatorId === product.creatorId
+    })
     const creator = creatorRecord ? mapCreator(creatorRecord.fields, 0, []) : null
 
     return { code: 0, data: product, creator }
   } catch {
-    const product = mockProducts.find(p => p.id === id)
+    const product = mockProducts.find(p => p.id === numId)
     if (!product) throw new Error('Product not found')
 
     const creator = mockCreators.find(c => c.id === product.creatorId)
@@ -173,9 +183,14 @@ export async function getProductById(id) {
 }
 
 export async function getCreatorById(id) {
+  const numId = typeof id === 'string' ? parseInt(id) : id
   try {
     const records = await larkGetCreators()
-    const record = records.find(r => r.fields?.id === id || r.fields?.name && id > 0)
+    const record = records.find(r => {
+      const fields = r.fields
+      const creatorId = parseInt(fields?.id || '0')
+      return creatorId === numId
+    })
 
     if (!record) throw new Error('Creator not found')
 
@@ -185,7 +200,8 @@ export async function getCreatorById(id) {
 
     return { code: 0, data: creator }
   } catch {
-    const creator = mockCreators.find(c => c.id === id)
+    const numId = typeof id === 'string' ? parseInt(id) : id
+    const creator = mockCreators.find(c => c.id === numId)
     if (!creator) throw new Error('Creator not found')
     return { code: 0, data: creator }
   }

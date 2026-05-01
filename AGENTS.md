@@ -65,3 +65,7 @@ Located in `src/static/images/`. Naming convention: `tab-*.png` (tab bar), `cat-
 - `cloudImage.js` uses `wx.cloud` directly — only works in WeChat environment, not H5 preview.
 - Feishu credentials are in plaintext in `src/config/lark.js`. These are app-level (not user-level) tokens.
 - Build output is `dist/dev/mp-weixin/` (dev) or `dist/build/mp-weixin/` (prod). The `mp-weixin/` dir at repo root is a **compiled artifact**, not source.
+
+## Behavioral Constraints
+
+- **NEVER guess or fabricate data.** When you need accurate information about products, categories, creators, or any other business data, ALWAYS query via Feishu API. Do not make assumptions about IDs, names, or relationships.

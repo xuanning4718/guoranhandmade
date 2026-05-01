@@ -2,6 +2,9 @@
   <view class="creator-list-page">
     <view class="header" :style="{ paddingTop: statusBarHeight + 'px' }">
       <view class="header-content">
+        <view class="back-btn" @click="goBack">
+          <text class="back-arrow">{{ '<' }}</text>
+        </view>
         <text class="title">创作者</text>
       </view>
     </view>
@@ -12,13 +15,13 @@
     >
       <view class="creator-list">
         <CreatorCard
-          v-for="creator in creators"
+          v-for="creator in sortedCreators"
           :key="creator.id"
           :creator="creator"
           @click="goCreatorDetail"
         />
       </view>
-      <view v-if="creators.length === 0" class="empty">
+      <view v-if="sortedCreators.length === 0" class="empty">
         <text class="empty-text">暂无创作者</text>
       </view>
     </scroll-view>
@@ -26,13 +29,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import CreatorCard from '../../components/CreatorCard.vue'
 import { getCreators } from '../../api/index.js'
 
 const statusBarHeight = ref(0)
 const headerHeight = ref(0)
 const creators = ref([])
+
+const sortedCreators = computed(() =>
+  [...creators.value].sort((a, b) => {
+    if ((b.worksCount || 0) !== (a.worksCount || 0)) {
+      return (b.worksCount || 0) - (a.worksCount || 0)
+    }
+    return (b.followers || 0) - (a.followers || 0)
+  })
+)
+
+function goBack() {
+  uni.navigateBack()
+}
 
 function goCreatorDetail(e) {
   const id = e?.id || e?.target?.dataset?.id
@@ -67,7 +83,20 @@ onMounted(async () => {
 }
 
 .header-content {
+  display: flex;
+  align-items: center;
   padding: 20rpx 32rpx;
+}
+
+.back-btn {
+  margin-right: 24rpx;
+  padding: 8rpx;
+}
+
+.back-arrow {
+  font-size: 44rpx;
+  color: #4a6741;
+  font-weight: 600;
 }
 
 .title {
