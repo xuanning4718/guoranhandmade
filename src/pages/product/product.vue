@@ -114,11 +114,13 @@
     <view class="action-bar">
       <view class="action-left">
         <view class="action-item" @click="addToWishlist">
-          <text :class="['action-icon', wishlistCount > 0 ? 'active' : '']">❤</text>
+          <text v-if="wishlistCount > 0" class="icon-text active">♥</text>
+          <text v-else class="icon-text">♡</text>
           <text class="action-text">意愿</text>
         </view>
         <view class="action-item" @click="toggleFavorite">
-          <text :class="['action-icon', isFavorited ? 'active' : '']">{{ isFavorited ? '❤️' : '♡' }}</text>
+          <text v-if="isFavorited" class="icon-text active">♥</text>
+          <text v-else class="icon-text">♡</text>
           <text class="action-text">收藏</text>
         </view>
       </view>
@@ -790,7 +792,7 @@ onMounted(() => {
 
 .action-left {
   display: flex;
-  gap: 32rpx;
+  gap: 24rpx;
   margin-right: 24rpx;
 }
 
@@ -798,19 +800,22 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
 }
 
-.action-icon {
-  font-size: 36rpx;
+.icon-text {
+  font-size: 44rpx;
   color: #666;
+  line-height: 1;
+  margin-bottom: 4rpx;
 }
 
-.action-icon.active {
+.icon-text.active {
   color: #e64340;
 }
 
 .action-text {
-  font-size: 18rpx;
+  font-size: 20rpx;
   color: #666;
 }
 
