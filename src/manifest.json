@@ -1,0 +1,20 @@
+{
+  "name": "菓然手作",
+  "appid": "",
+  "description": "发现生活中的美好手作",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "mp-weixin": {
+    "appid": "wx1b7d7a955b691044",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "minified": true,
+      "minifyWXSS": true,
+      "minifyWXML": true
+    },
+    "usingComponents": true,
+    "cloud": true
+  }
+}
