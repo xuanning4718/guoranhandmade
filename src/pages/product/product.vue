@@ -86,7 +86,13 @@
             </view>
             <view class="comment-footer">
               <view class="reply-trigger" @click="openReply(rootComment.id)">
+                <image class="footer-icon" src="/static/images/comment.png" mode="aspectFit" />
                 <text class="reply-text">回复</text>
+              </view>
+              <view class="like-trigger" @click="toggleLike(rootComment.id)">
+                <text v-if="likedComments[rootComment.id]" class="like-count">{{ rootComment.likes + 1 }}</text>
+                <text v-else class="like-count">{{ rootComment.likes || '' }}</text>
+                <image class="footer-icon" :src="likedComments[rootComment.id] ? '/static/images/good-active.png' : '/static/images/good.png'" mode="aspectFit" />
               </view>
             </view>
             <view v-if="replies[rootComment.id]?.length > 0" class="reply-list">
@@ -183,6 +189,7 @@ const commentScore = ref(null)
 const showAllComments = ref(false)
 const expandReplies = ref({})
 const userName = ref('')
+const likedComments = ref({})
 
 const placeholderColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
 
@@ -201,6 +208,13 @@ const replies = computed(() => {
 const isFavorited = computed(() => favoriteStore.isProductFavorited(productId.value))
 const isInWishlist = computed(() => wishlistStore.isInWishlist(productId.value))
 const wishlistCount = computed(() => wishlistStore.totalCount)
+
+function toggleLike(commentId) {
+  likedComments.value = {
+    ...likedComments.value,
+    [commentId]: !likedComments.value[commentId]
+  }
+}
 
 const category = computed(() => {
   if (!product.value) return null
@@ -692,9 +706,13 @@ onMounted(() => {
 .comment-footer {
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
 .reply-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
   font-size: 22rpx;
   color: #4a6741;
   padding: 4rpx 12rpx;
@@ -707,6 +725,30 @@ onMounted(() => {
 
 .reply-text {
   color: #4a6741;
+}
+
+.like-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 12rpx;
+}
+
+.like-trigger:active {
+  opacity: 0.7;
+}
+
+.like-count {
+  font-size: 22rpx;
+  color: #999;
+  min-width: 20rpx;
+  text-align: right;
+}
+
+.footer-icon {
+  width: 32rpx;
+  height: 32rpx;
 }
 
 .reply-list {
