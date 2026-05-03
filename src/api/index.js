@@ -152,19 +152,20 @@ export async function getNewProducts() {
 export async function getProductById(id) {
   const numId = typeof id === 'string' ? parseInt(id) : id
   try {
-    const products = await larkGetProducts()
-    const record = products.find(r => {
-      const fields = r.fields
-      const recordId = parseInt(fields?.id || fields?.文本 || '0')
-      return recordId === numId
-    })
+    const [records, creators] = await Promise.all([
+      larkGetProducts(),
+      larkGetCreators()
+    ])
 
-    if (!record) throw new Error('Product not found')
+    const mapped = records
+      .filter(r => r.fields && r.fields.status === '上架')
+      .map(r => mapProduct(r.fields))
 
-    const product = mapProduct(record.fields)
+    const product = mapped.find(p => p.id === numId)
+    if (!product) throw new Error('Product not found')
+
     product.images = await convertCloudImages(product.images)
 
-    const creators = await larkGetCreators()
     const creatorRecord = creators.find(r => {
       const fields = r.fields
       const creatorId = parseInt(fields?.id || '0')
@@ -246,33 +247,38 @@ export async function getCreators() {
 export async function getComments(productId) {
   try {
     const records = await larkGetComments(productId)
+    console.log('[api] getComments raw records from lark:', records.length)
+    if (records.length > 0) {
+      records.forEach(r => console.log('[api] comment record id:', r.fields?.ID, 'parent_id:', r.fields?.parent_id))
+    }
     const comments = records.map(r => mapComment(r.fields, r.record_id))
+
+    // Convert user avatars (cloud:// URLs)
+    const avatarUrls = comments.filter(c => c.userAvatar?.startsWith('cloud://')).map(c => c.userAvatar)
+    if (avatarUrls.length > 0) {
+      const convertedAvatars = await convertCloudImages(avatarUrls)
+      comments.filter(c => c.userAvatar?.startsWith('cloud://')).forEach((c, idx) => {
+        c.userAvatar = convertedAvatars[idx] || c.userAvatar
+      })
+    }
 
     const replies = {}
     comments.forEach(c => {
-      if (c.parentId && c.parentId > 0) {
-        if (!replies[c.parentId]) replies[c.parentId] = []
-        replies[c.parentId].push(c)
+      const pid = String(c.parentId || '')
+      if (pid && pid !== '0') {
+        if (!replies[pid]) replies[pid] = []
+        replies[pid].push(c)
       }
     })
 
-    const rootComments = comments.filter(c => !c.parentId || c.parentId === 0)
-    rootComments.forEach(c => {
-      c.replies = replies[c.id] || []
-    })
-
-    return { code: 0, data: rootComments }
+    return { code: 0, data: comments }
   } catch {
     return getCommentsFallback(productId)
   }
 }
 
 export async function addComment(comment) {
-  try {
-    return await larkAddComment(comment)
-  } catch {
-    return { success: true }
-  }
+  return await larkAddComment(comment)
 }
 
 export async function likeComment(commentId) {

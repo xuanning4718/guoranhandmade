@@ -21,6 +21,21 @@ function getField(record, ...keys) {
   return null
 }
 
+function parseNumberField(value) {
+  if (!value) return 0
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const n = parseFloat(value)
+    return isNaN(n) ? 0 : n
+  }
+  if (typeof value === 'object') {
+    const raw = value.text ?? value.value ?? '0'
+    const n = parseFloat(raw)
+    return isNaN(n) ? 0 : n
+  }
+  return 0
+}
+
 function parseImageField(value) {
   if (!value) return []
   if (Array.isArray(value)) return value
@@ -120,8 +135,11 @@ export function mapCreator(record, creatorCount = 0, products = []) {
 }
 
 export function mapComment(record, recordId = '') {
+  const rawId = getField(record, 'ID') || ''
+  const parsedId = parseInt(String(rawId).replace(/\D/g, '')) || 0
+
   return {
-    id: parseInt(getField(record, 'ID') || '0'),
+    id: parsedId,
     recordId,
     productId: parseInt(getField(record, 'product_id') || '0'),
     userId: parseInt(getField(record, 'user_id') || '0'),
@@ -129,8 +147,8 @@ export function mapComment(record, recordId = '') {
     userAvatar: getField(record, 'user_avatar') || '',
     content: getField(record, 'content') || '',
     images: parseImageField(getField(record, 'images')),
-    likes: parseInt(getField(record, 'likes') || '0'),
+    likes: parseNumberField(getField(record, 'likes')),
     createdAt: getField(record, 'time') || '',
-    parentId: parseInt(getField(record, 'para_id') || '0')
+    parentId: String(getField(record, 'parent_id', 'para_id') || '0')
   }
 }

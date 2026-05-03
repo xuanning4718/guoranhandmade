@@ -23,12 +23,13 @@ export const useWishlistStore = defineStore('wishlist', () => {
   }
 
   function addItem(product) {
-    if (items.value.find(item => item.productId === product.id)) {
+    const id = product.id !== undefined ? product.id : product.productId
+    if (items.value.find(item => item.productId === id)) {
       return false
     }
 
     items.value.unshift({
-      productId: product.id,
+      productId: id,
       title: product.title,
       image: product.images?.[0] || '',
       creatorId: product.creatorId,
@@ -37,6 +38,7 @@ export const useWishlistStore = defineStore('wishlist', () => {
       addedAt: new Date().toISOString().split('T')[0]
     })
 
+    console.log('[wishlist] saved item:', JSON.stringify(items.value[0]))
     save()
     return true
   }

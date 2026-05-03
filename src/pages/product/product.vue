@@ -61,7 +61,7 @@
         <text class="section-title">作品详情</text>
         <text class="product-description">{{ product.description }}</text>
         <view v-if="product.createdAt" class="created-time">
-          <text class="time-label">上架时间</text>
+          <text class="time-label">上架时间：</text>
           <text class="time-value">{{ formatDate(product.createdAt) }}</text>
         </view>
         <view v-if="product.images.length > 0" class="detail-images">
@@ -79,44 +79,69 @@
       <view class="comment-section">
         <view class="section-header">
           <text class="section-title">评价</text>
-          <text class="comment-count">({{ comments.length }})</text>
+          <text v-if="comments.length > 0" class="comment-count">({{ comments.length }})</text>
         </view>
 
         <view v-if="comments.length > 0" class="comment-list">
           <view v-for="rootComment in rootComments" :key="rootComment.id" class="comment-item">
             <view class="comment-main">
-              <view class="comment-meta">
-                <text class="comment-user">{{ rootComment.userName }}</text>
-                <view class="comment-stars">
-                  <text
-                    v-for="s in [1,2,3,4,5]"
-                    :key="s"
-                    class="star"
-                    :class="{ filled: s <= rootComment.score }"
-                  >★</text>
+              <view class="comment-avatar" :class="{ 'avatar-default': !rootComment.userAvatar }">
+                <image v-if="rootComment.userAvatar" class="avatar-img" :src="rootComment.userAvatar" mode="aspectFill" @error="onAvatarError(rootComment.id)" />
+                <text v-else class="avatar-text">{{ rootComment.userName?.charAt(0) || '用' }}</text>
+              </view>
+              <view class="comment-content-wrap">
+                <view class="comment-header">
+                  <text class="comment-user">{{ rootComment.userName }}</text>
+                  <view class="like-trigger" @click="toggleLike(rootComment.id)">
+                    <text v-if="likedComments[rootComment.id]" class="like-count">{{ (rootComment.likes || 0) + 1 }}</text>
+                    <text v-else class="like-count">{{ rootComment.likes || '' }}</text>
+                    <image class="footer-icon" :src="likedComments[rootComment.id] ? '/static/images/good-active.png' : '/static/images/good.png'" mode="aspectFit" />
+                  </view>
                 </view>
-              </view>
-              <text class="comment-content">{{ rootComment.content }}</text>
-            </view>
-            <view class="comment-footer">
-              <view class="reply-trigger" @click="openReply(rootComment.id)">
-                <image class="footer-icon" src="/static/images/comment.png" mode="aspectFit" />
-                <text class="reply-text">回复</text>
-              </view>
-              <view class="like-trigger" @click="toggleLike(rootComment.id)">
-                <text v-if="likedComments[rootComment.id]" class="like-count">{{ (rootComment.likes || 0) + 1 }}</text>
-                <text v-else class="like-count">{{ rootComment.likes > 0 ? rootComment.likes : '' }}</text>
-                <image class="footer-icon" :src="likedComments[rootComment.id] ? '/static/images/good-active.png' : '/static/images/good.png'" mode="aspectFit" />
-              </view>
-            </view>
-            <view v-if="replies[rootComment.id]?.length > 0" class="reply-list">
-              <view class="reply-count" @click="toggleReplies(rootComment.id)">
-                <text>{{ replies[rootComment.id].length }} 条回复</text>
-              </view>
-              <view v-if="expandReplies[rootComment.id]" class="reply-items">
-                <view v-for="reply in replies[rootComment.id]" :key="reply.id" class="reply-item">
-                  <text class="reply-user">{{ reply.userName }}:</text>
-                  <text class="reply-content">{{ reply.content }}</text>
+                <text class="comment-content">{{ rootComment.content }}</text>
+                <view class="comment-footer">
+                  <text class="comment-time">{{ formatCommentTime(rootComment.createdAt) }}</text>
+                  <view class="reply-trigger" @click="openInlineReply(rootComment.id)">
+                    <image class="footer-icon" src="/static/images/comment.png" mode="aspectFit" />
+                    <text class="reply-text">回复</text>
+                  </view>
+                </view>
+
+                <!-- Inline reply input -->
+                <view v-if="replyToId === rootComment.id" class="inline-reply">
+                  <textarea class="reply-textarea" placeholder="写下你的回复..." @input="onReplyInput" :value="replyText" maxlength="200" auto-height />
+                  <view class="reply-actions">
+                    <view class="reply-cancel" @click="cancelReply">
+                      <text>取消</text>
+                    </view>
+                    <view class="reply-submit" @click="submitReply(rootComment.id)">
+                      <text>回复</text>
+                    </view>
+                  </view>
+                </view>
+
+                <!-- Inline reply list -->
+                <view v-if="replies[String(rootComment.id)]?.length > 0" class="reply-section">
+                  <view v-for="reply in replies[String(rootComment.id)]" :key="reply.id" class="reply-item">
+                    <view class="reply-avatar" :class="{ 'avatar-default': !reply.userAvatar }">
+                      <image v-if="reply.userAvatar" class="avatar-img" :src="reply.userAvatar" mode="aspectFill" />
+                      <text v-else class="avatar-text">{{ reply.userName?.charAt(0) || '用' }}</text>
+                    </view>
+                    <view class="reply-body-wrap">
+                      <view class="reply-header">
+                        <text class="reply-user">{{ reply.userName }}</text>
+                        <view class="reply-like-trigger" @click="toggleReplyLike(reply.id)">
+                          <text v-if="likedReplies[reply.id]" class="reply-like-count">{{ (reply.likes || 0) + 1 }}</text>
+                          <text v-else class="reply-like-count">{{ reply.likes || '' }}</text>
+                          <image class="footer-icon" :src="likedReplies[reply.id] ? '/static/images/good-active.png' : '/static/images/good.png'" mode="aspectFit" />
+                        </view>
+                      </view>
+                      <text class="reply-content">{{ reply.content }}</text>
+                      <view class="reply-footer">
+                        <text class="reply-time">{{ formatCommentTime(reply.createdAt) }}</text>
+                      </view>
+                    </view>
+                  </view>
                 </view>
               </view>
             </view>
@@ -126,8 +151,9 @@
         <view v-else class="empty-comments">
           <text class="empty-icon">💬</text>
           <text class="empty-text">暂无评价</text>
-          <button class="add-comment-btn" @click="openComment">写评价</button>
         </view>
+
+        <button class="publish-comment-btn" @click="openComment">发表评价</button>
       </view>
     </scroll-view>
 
@@ -154,7 +180,7 @@
     <view v-if="showComment" class="form-mask" @tap="closeComment">
       <view class="form-panel" catchtap>
         <view class="form-header">
-          <text class="form-title">写评价</text>
+          <text class="form-title">{{ replyingTo ? '回复' : '发表评价' }}</text>
           <view class="form-close" @click="closeComment">
             <text>✕</text>
           </view>
@@ -173,7 +199,38 @@
             />
             <text class="char-count">{{ commentText.length }}/200</text>
           </view>
-          <button class="submit-btn" @click="submitComment">发布</button>
+          <button class="submit-btn" @click="submitComment">{{ replyingTo ? '回复' : '发布' }}</button>
+        </view>
+      </view>
+    </view>
+
+    <view v-if="showProfileSetup" class="form-mask" @click="closeProfileSetup">
+      <view class="form-panel" @click.stop>
+        <view class="form-header">
+          <text class="form-title">设置资料</text>
+          <view class="form-close" @click="closeProfileSetup">
+            <text>✕</text>
+          </view>
+        </view>
+        <view class="form-body">
+          <view class="form-group">
+            <text class="form-label">头像</text>
+            <button class="avatar-upload-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+              <image v-if="tempAvatar" class="avatar-preview" :src="tempAvatar" mode="aspectFill" />
+              <text v-else class="avatar-placeholder">点击选择头像</text>
+            </button>
+          </view>
+          <view class="form-group">
+            <text class="form-label">昵称</text>
+            <input
+              class="form-input"
+              type="nickname"
+              placeholder="请输入昵称"
+              @input="onNicknameInput"
+              :value="tempNickname"
+            />
+          </view>
+          <button class="save-btn" @click="saveProfile">保存</button>
         </view>
       </view>
     </view>
@@ -184,9 +241,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useWishlistStore } from '../../stores/cart.js'
 import { useFavoriteStore } from '../../stores/favorite.js'
-import { getProductById, getCreators, getComments, addComment } from '../../api/index.js'
-import { getUserInfo } from '../../services/auth.js'
+import { getProductById, getCreators, getComments, addComment, likeComment as likeCommentApi } from '../../api/index.js'
+import { getUserInfo, isProfileComplete, updateProfile, uploadAvatarToCloud } from '../../services/auth.js'
 import { mockData } from '../../api/mockData.js'
+import { formatRelativeTime } from '../../utils/formatTime.js'
 
 const wishlistStore = useWishlistStore()
 const favoriteStore = useFavoriteStore()
@@ -206,16 +264,38 @@ const showAllComments = ref(false)
 const expandReplies = ref({})
 const userName = ref('')
 const likedComments = ref({})
+const likedReplies = ref({})
+
+const showProfileSetup = ref(false)
+const tempAvatar = ref('')
+const tempNickname = ref('')
+const pendingComment = ref(false)
+const pendingReplyToId = ref(null)
+
+const replyToId = ref(null)
+const replyText = ref('')
 
 const placeholderColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
 
-const rootComments = computed(() => comments.value.filter(c => !c.parentId || c.parentId === 0))
+const rootComments = computed(() => {
+  const pid = (c) => {
+    const v = typeof c.parentId === 'string' ? parseInt(c.parentId) : c.parentId
+    return isNaN(v) ? 0 : v
+  }
+  return comments.value.filter(c => pid(c) === 0)
+})
 const replies = computed(() => {
   const map = {}
+  const pid = (c) => {
+    const v = typeof c.parentId === 'string' ? parseInt(c.parentId) : c.parentId
+    return isNaN(v) ? 0 : v
+  }
   comments.value.forEach(c => {
-    if (c.parentId && c.parentId > 0) {
-      if (!map[c.parentId]) map[c.parentId] = []
-      map[c.parentId].push(c)
+    const p = pid(c)
+    if (p > 0) {
+      const key = String(p)
+      if (!map[key]) map[key] = []
+      map[key].push(c)
     }
   })
   return map
@@ -225,10 +305,33 @@ const isFavorited = computed(() => favoriteStore.isProductFavorited(productId.va
 const isInWishlist = computed(() => wishlistStore.isInWishlist(productId.value))
 const wishlistCount = computed(() => wishlistStore.totalCount)
 
-function toggleLike(commentId) {
+async function toggleLike(commentId) {
+  const isLiked = likedComments.value[commentId]
   likedComments.value = {
     ...likedComments.value,
-    [commentId]: !likedComments.value[commentId]
+    [commentId]: !isLiked
+  }
+  if (!isLiked) {
+    try {
+      await likeCommentApi(commentId)
+    } catch (e) {
+      console.error('[product] likeComment failed:', e)
+    }
+  }
+}
+
+async function toggleReplyLike(replyId) {
+  const isLiked = likedReplies.value[replyId]
+  likedReplies.value = {
+    ...likedReplies.value,
+    [replyId]: !isLiked
+  }
+  if (!isLiked) {
+    try {
+      await likeCommentApi(replyId)
+    } catch (e) {
+      console.error('[product] likeReply failed:', e)
+    }
   }
 }
 
@@ -276,6 +379,10 @@ function getUserName(id) {
   return c ? c.userName : ''
 }
 
+function formatCommentTime(ts) {
+  return formatRelativeTime(ts)
+}
+
 function onImageChange(e) {
   currentImage.value = e.detail.current
 }
@@ -287,7 +394,8 @@ async function loadData() {
     creator.value = productRes.creator
 
     const commentData = await getComments(productId.value)
-    if (commentData.data) {
+    console.log('[product] loadData comments:', commentData)
+    if (commentData.data && Array.isArray(commentData.data)) {
       comments.value = commentData.data
     }
 
@@ -305,6 +413,11 @@ function toggleAllComments() {
 }
 
 function openReply(commentId) {
+  if (!isProfileComplete()) {
+    pendingComment.value = true
+    openProfileSetup()
+    return
+  }
   const comment = comments.value.find(c => c.id === commentId)
   replyingTo.value = commentId
   replyingUserName.value = comment?.userName || ''
@@ -336,14 +449,148 @@ function submitRating() {
 }
 
 function openComment() {
+  if (!isProfileComplete()) {
+    pendingComment.value = true
+    openProfileSetup()
+    return
+  }
   replyingTo.value = null
   showComment.value = true
   commentText.value = ''
   userName.value = getUserInfo().nickName || '匿名用户'
 }
 
+function openProfileSetup() {
+  const info = getUserInfo()
+  tempAvatar.value = ''
+  tempNickname.value = ''
+  showProfileSetup.value = true
+}
+
+function closeProfileSetup() {
+  showProfileSetup.value = false
+  pendingComment.value = false
+}
+
+function onChooseAvatar(e) {
+  tempAvatar.value = e.detail.avatarUrl
+}
+
+function onNicknameInput(e) {
+  tempNickname.value = e.detail.value
+}
+
+function saveProfile() {
+  if (!tempNickname.value.trim()) {
+    uni.showToast({ title: '请输入昵称', icon: 'none' })
+    return
+  }
+  if (!tempAvatar.value) {
+    uni.showToast({ title: '请上传头像', icon: 'none' })
+    return
+  }
+
+  uni.showLoading({ title: '保存中...' })
+
+  uploadAvatarToCloud(tempAvatar.value)
+    .then(newAvatar => {
+      const info = {
+        nickName: tempNickname.value.trim(),
+        avatar: newAvatar
+      }
+      updateProfile(info)
+      uni.hideLoading()
+      showProfileSetup.value = false
+      uni.showToast({ title: '保存成功', icon: 'success' })
+
+      if (pendingReplyToId.value !== null) {
+        const replyId = pendingReplyToId.value
+        pendingReplyToId.value = null
+        pendingComment.value = false
+        setTimeout(() => {
+          openInlineReply(replyId)
+        }, 500)
+      } else if (pendingComment.value) {
+        pendingComment.value = false
+        setTimeout(() => {
+          openComment()
+        }, 500)
+      }
+    })
+    .catch(() => {
+      uni.hideLoading()
+      uni.showToast({ title: '保存失败', icon: 'none' })
+    })
+}
+
 function onCommentInput(e) {
   commentText.value = e.detail.value
+}
+
+function onAvatarError(commentId) {
+  const idx = comments.value.findIndex(c => c.id === commentId)
+  if (idx > -1) {
+    comments.value[idx].userAvatar = ''
+  }
+}
+
+function openInlineReply(commentId) {
+  if (!isProfileComplete()) {
+    pendingComment.value = true
+    pendingReplyToId.value = commentId
+    openProfileSetup()
+    return
+  }
+  replyToId.value = commentId
+  replyText.value = ''
+}
+
+function onReplyInput(e) {
+  replyText.value = e.detail.value
+}
+
+function cancelReply() {
+  replyToId.value = null
+  replyText.value = ''
+}
+
+async function submitReply(parentId) {
+  if (!replyText.value.trim()) {
+    uni.showToast({ title: '请输入回复内容', icon: 'none' })
+    return
+  }
+
+  console.log('[product] submitReply: parentId=', parentId, 'type:', typeof parentId)
+
+  const userInfo = getUserInfo()
+  const reply = {
+    productId: parseInt(productId.value),
+    userId: 0,
+    parentId: parseInt(parentId),
+    userName: userInfo.nickName || '匿名用户',
+    userAvatar: userInfo.avatar || '',
+    content: replyText.value,
+    createdAt: new Date().toISOString()
+  }
+
+  console.log('[product] submitReply object:', JSON.stringify(reply))
+
+  try {
+    uni.showLoading({ title: '发布中...' })
+    await addComment(reply)
+    await refreshComments()
+
+    replyToId.value = null
+    replyText.value = ''
+  } catch (err) {
+    console.error('[product] submitReply failed:', err)
+    uni.showToast({ title: '发布失败，请重试', icon: 'none' })
+    return
+  } finally {
+    uni.hideLoading()
+  }
+
+  uni.showToast({ title: '回复成功', icon: 'success' })
 }
 
 function closeComment() {
@@ -356,23 +603,46 @@ async function submitComment() {
     return
   }
 
+  const userInfo = getUserInfo()
   const comment = {
-    id: Date.now(),
     productId: productId.value,
+    userId: 0,
     parentId: replyingTo.value,
-    userName: getUserInfo().nickName || '匿名用户',
+    userName: userInfo.nickName || '匿名用户',
+    userAvatar: userInfo.avatar || '',
     content: commentText.value,
-    score: commentScore.value ? commentScore.value.stars.length : 5,
-    avatar: '',
     createdAt: new Date().toISOString()
   }
 
-  comments.value.push(comment)
+  try {
+    uni.showLoading({ title: '发布中...' })
+    await addComment(comment)
+    await refreshComments()
+  } catch (err) {
+    console.error('[product] addComment failed:', err)
+    uni.showToast({ title: '发布失败，请重试', icon: 'none' })
+    return
+  } finally {
+    uni.hideLoading()
+  }
+
   commentText.value = ''
   showComment.value = false
   replyingTo.value = null
 
   uni.showToast({ title: '发布成功', icon: 'success' })
+}
+
+async function refreshComments() {
+  try {
+    const result = await getComments(productId.value)
+    if (result.data && Array.isArray(result.data)) {
+      comments.value = result.data
+      console.log('[product] refreshComments: loaded', result.data.length, 'comments')
+    }
+  } catch (err) {
+    console.error('[product] refreshComments failed:', err)
+  }
 }
 
 function previewImage(url) {
@@ -670,16 +940,15 @@ onMounted(() => {
 .created-time {
   display: flex;
   align-items: center;
-  padding: 16rpx 0;
-  margin-bottom: 24rpx;
-  border-top: 1rpx solid #f0ebe3;
-  border-bottom: 1rpx solid #f0ebe3;
+  margin: 16rpx 0;
+  border: none;
+  padding: 8rpx 0;
 }
 
 .time-label {
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: #999;
-  margin-right: 16rpx;
+  margin-right: 0;
 }
 
 .time-value {
@@ -732,39 +1001,64 @@ onMounted(() => {
   border-bottom: 1rpx solid #f0ebe3;
 }
 
-.comment-meta {
+.comment-main {
+  display: flex;
+  gap: 16rpx;
+}
+
+.comment-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #eee;
+}
+
+.comment-avatar.avatar-default {
   display: flex;
   align-items: center;
-  margin-bottom: 12rpx;
+  justify-content: center;
+}
+
+.comment-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.comment-avatar .avatar-text {
+  font-size: 24rpx;
+  color: #fff;
+  font-weight: 600;
+}
+
+.comment-avatar.avatar-default {
+  background: #c4a882;
+}
+
+.comment-content-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
 }
 
 .comment-user {
   font-size: 24rpx;
   font-weight: 600;
   color: #333;
-  margin-right: 16rpx;
-}
-
-.comment-stars {
-  display: flex;
-}
-
-.comment-stars .star {
-  font-size: 20rpx;
-  color: #ddd;
-  margin-right: 2rpx;
-}
-
-.comment-stars .star.filled {
-  color: #f5a623;
 }
 
 .comment-content {
-  font-size: 24rpx;
+  font-size: 26rpx;
   color: #333;
   line-height: 1.6;
   display: block;
-  margin-bottom: 12rpx;
 }
 
 .comment-footer {
@@ -817,7 +1111,53 @@ onMounted(() => {
 
 .reply-list {
   margin-top: 16rpx;
-  padding-left: 24rpx;
+  padding-left: 0;
+}
+
+.inline-reply {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  background: #faf7f2;
+  border-radius: 8px;
+}
+
+.reply-textarea {
+  width: 100%;
+  min-height: 120rpx;
+  padding: 16rpx;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 26rpx;
+  box-sizing: border-box;
+}
+
+.reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16rpx;
+  margin-top: 12rpx;
+}
+
+.reply-cancel {
+  padding: 8rpx 24rpx;
+  border-radius: 20rpx;
+  background: transparent;
+}
+
+.reply-cancel text {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.reply-submit {
+  padding: 8rpx 24rpx;
+  border-radius: 20rpx;
+  background: #4a6741;
+}
+
+.reply-submit text {
+  font-size: 24rpx;
+  color: #fff;
 }
 
 .reply-count {
@@ -836,13 +1176,70 @@ onMounted(() => {
 
 .reply-item {
   padding: 12rpx 0;
+  display: flex;
+  gap: 12rpx;
+}
+
+.reply-avatar {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #eee;
+}
+
+.reply-avatar.avatar-default {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #c4a882;
+}
+
+.reply-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.reply-avatar .avatar-text {
+  font-size: 18rpx;
+  color: #fff;
+  font-weight: 600;
+}
+
+.reply-content-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4rpx;
 }
 
 .reply-user {
   font-size: 22rpx;
   color: #4a6741;
   font-weight: 600;
-  margin-right: 8rpx;
+}
+
+.reply-like-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 4rpx 8rpx;
+  border-radius: 12rpx;
+}
+
+.reply-like-trigger:active {
+  opacity: 0.7;
+}
+
+.reply-like-count {
+  font-size: 22rpx;
+  color: #999;
 }
 
 .reply-content {
@@ -857,29 +1254,20 @@ onMounted(() => {
   padding: 48rpx 0;
 }
 
-.empty-icon {
-  font-size: 64rpx;
-  margin-bottom: 16rpx;
-  opacity: 0.3;
-}
-
-.empty-text {
-  font-size: 24rpx;
-  color: #999;
-  margin-bottom: 24rpx;
-}
-
-.add-comment-btn {
+.publish-comment-btn {
+  width: 100%;
   background: #4a6741;
   color: #fff;
   border-radius: 40rpx;
-  height: 72rpx;
-  line-height: 72rpx;
-  font-size: 24rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 28rpx;
+  font-weight: 600;
   border: none;
+  margin-top: 24rpx;
 }
 
-.add-comment-btn::after {
+.publish-comment-btn::after {
   border: none;
 }
 
@@ -1044,6 +1432,65 @@ onMounted(() => {
   margin-bottom: 32rpx;
 }
 
+.form-label {
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 16rpx;
+  display: block;
+}
+
+.avatar-upload-btn {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #faf7f2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+}
+
+.avatar-upload-btn::after {
+  border: none;
+}
+
+.avatar-preview {
+  width: 100%;
+  height: 100%;
+}
+
+.avatar-placeholder {
+  font-size: 20rpx;
+  color: #999;
+}
+
+.form-input {
+  width: 100%;
+  padding: 24rpx;
+  background: #faf7f2;
+  border-radius: 8px;
+  font-size: 28rpx;
+}
+
+.save-btn {
+  width: 100%;
+  background: #4a6741;
+  color: #fff;
+  border-radius: 40rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  margin-top: 32rpx;
+  border: none;
+}
+
+.save-btn::after {
+  border: none;
+}
+
 .comment-input {
   width: 100%;
   min-height: 200rpx;
@@ -1084,5 +1531,25 @@ onMounted(() => {
   margin-bottom: 16rpx;
   font-size: 24rpx;
   color: #666;
+}
+
+.comment-time {
+  font-size: 22rpx;
+  color: #bbb;
+  align-self: flex-end;
+}
+
+.reply-body-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-footer {
+  margin-top: 6rpx;
+}
+
+.reply-time {
+  font-size: 20rpx;
+  color: #bbb;
 }
 </style>
