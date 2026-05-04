@@ -93,8 +93,7 @@
                 <view class="comment-header">
                   <text class="comment-user">{{ rootComment.userName }}</text>
                   <view class="like-trigger" @click="toggleLike(rootComment.id)">
-                    <text v-if="likedComments[rootComment.id]" class="like-count">{{ (rootComment.likes || 0) + 1 }}</text>
-                    <text v-else class="like-count">{{ rootComment.likes || '' }}</text>
+                    <text class="like-count">{{ rootComment.likes || '' }}</text>
                     <image class="footer-icon" :src="likedComments[rootComment.id] ? '/static/images/good-active.png' : '/static/images/good.png'" mode="aspectFit" />
                   </view>
                 </view>
@@ -131,8 +130,7 @@
                       <view class="reply-header">
                         <text class="reply-user">{{ reply.userName }}</text>
                         <view class="reply-like-trigger" @click="toggleReplyLike(reply.id)">
-                          <text v-if="likedReplies[reply.id]" class="reply-like-count">{{ (reply.likes || 0) + 1 }}</text>
-                          <text v-else class="reply-like-count">{{ reply.likes || '' }}</text>
+                          <text class="reply-like-count">{{ reply.likes || '' }}</text>
                           <image class="footer-icon" :src="likedReplies[reply.id] ? '/static/images/good-active.png' : '/static/images/good.png'" mode="aspectFit" />
                         </view>
                       </view>
@@ -306,32 +304,52 @@ const isInWishlist = computed(() => wishlistStore.isInWishlist(productId.value))
 const wishlistCount = computed(() => wishlistStore.totalCount)
 
 async function toggleLike(commentId) {
-  const isLiked = likedComments.value[commentId]
+  if (likedComments.value[commentId]) return
+
+  const comment = comments.value.find(c => c.id === commentId)
+  if (!comment) return
+
   likedComments.value = {
     ...likedComments.value,
-    [commentId]: !isLiked
+    [commentId]: true
   }
-  if (!isLiked) {
-    try {
-      await likeCommentApi(commentId)
-    } catch (e) {
-      console.error('[product] likeComment failed:', e)
+  const prevLikes = comment.likes
+  comment.likes = (comment.likes || 0) + 1
+
+  try {
+    await likeCommentApi(commentId)
+  } catch (e) {
+    console.error('[product] likeComment failed:', e)
+    likedComments.value = {
+      ...likedComments.value,
+      [commentId]: false
     }
+    comment.likes = prevLikes
   }
 }
 
 async function toggleReplyLike(replyId) {
-  const isLiked = likedReplies.value[replyId]
+  if (likedReplies.value[replyId]) return
+
+  const reply = comments.value.find(c => c.id === replyId)
+  if (!reply) return
+
   likedReplies.value = {
     ...likedReplies.value,
-    [replyId]: !isLiked
+    [replyId]: true
   }
-  if (!isLiked) {
-    try {
-      await likeCommentApi(replyId)
-    } catch (e) {
-      console.error('[product] likeReply failed:', e)
+  const prevLikes = reply.likes
+  reply.likes = (reply.likes || 0) + 1
+
+  try {
+    await likeCommentApi(replyId)
+  } catch (e) {
+    console.error('[product] likeReply failed:', e)
+    likedReplies.value = {
+      ...likedReplies.value,
+      [replyId]: false
     }
+    reply.likes = prevLikes
   }
 }
 
@@ -646,7 +664,7 @@ async function refreshComments() {
 }
 
 function previewImage(url) {
-  uni.previewImage({ urls: [url] })
+  uni.previewImage({ urls: product.images, current: url })
 }
 
 function formatDate(value) {
@@ -662,12 +680,13 @@ function formatDate(value) {
 
 function addToWishlist() {
   if (!product.value) return
-  wishlistStore.addItem({
-    productId: product.value.id,
-    title: product.value.title,
-    tags: product.value.tags,
-    addedAt: new Date().toLocaleDateString('zh-CN')
-  })
+    wishlistStore.addItem({
+      productId: product.value.id,
+      title: product.value.title,
+      images: product.value.images,
+      tags: product.value.tags,
+      addedAt: new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+    })
   uni.showToast({ title: '已加入意愿', icon: 'success' })
 }
 
