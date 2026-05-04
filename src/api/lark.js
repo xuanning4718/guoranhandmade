@@ -175,6 +175,9 @@ export async function getCreators() {
 export async function getComments(productId) {
   const all = await fetchAllRecords(TABLE_IDS.comments)
   console.log('[lark] getComments total fetched:', all.length)
+  if (all.length > 0) {
+    console.log('[lark] getComments sample likes:', JSON.stringify(all[0]?.fields?.likes))
+  }
   
   if (productId === undefined || productId === null || productId === '') {
     console.warn('[lark] getComments: productId is missing, returning empty')
@@ -216,6 +219,7 @@ export async function addComment(comment) {
       user_name: comment.userName || '匿名用户',
       user_avatar: comment.userAvatar || '',
       content: comment.content || '',
+      likes: 0,
       time: new Date(comment.createdAt || Date.now()).getTime()
     }
   }
@@ -265,6 +269,7 @@ export async function likeComment(commentId) {
     }
 
     const rawLikes = target.fields?.likes
+    console.log('[lark] likeComment: raw likes field:', JSON.stringify(rawLikes))
     const currentLikes = rawLikes && typeof rawLikes === 'object'
       ? parseInt(rawLikes.text || '0')
       : parseInt(rawLikes || '0')
@@ -306,4 +311,34 @@ export async function updateProductStats(productId, stats) {
     'PUT',
     record
   )
+}
+
+export async function getHotKeywords(forceRefresh = false) {
+  const cacheKey = 'lark_hot_keywords'
+  const cached = getCachedData(cacheKey)
+  if (cached && !forceRefresh) return cached
+  
+  const defaultKeywords = ['冰箱贴', '旅行图册', '手抄报', '鹅卵石']
+  
+  try {
+    const records = await fetchAllRecords(TABLE_IDS.params)
+    const hotRecord = records.find(r => r.fields?.['参数'] === '热门搜索')
+    
+    if (!hotRecord) return defaultKeywords
+    
+    const keywordsStr = hotRecord.fields?.['参数_文本'] || ''
+    const keywords = keywordsStr 
+      ? keywordsStr.split(',').map(k => k.trim()).filter(k => k) 
+      : []
+    
+    if (keywords.length > 0) {
+      setCachedData(cacheKey, keywords)
+      return keywords
+    }
+    
+    return defaultKeywords
+  } catch (err) {
+    console.warn('获取热门搜索关键词失败，使用默认值:', err.message)
+    return defaultKeywords
+  }
 }

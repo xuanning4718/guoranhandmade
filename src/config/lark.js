@@ -9,5 +9,6 @@ export const TABLE_IDS = {
   categories: 'tblnoWmdUr20u7R8',
   creators: 'tbl0mBur9CJPldrq',
   comments: 'tblP2MVGSpu23njx',
-  categoryDets: 'tblwmmaBuWGNUEJZ'
+  categoryDets: 'tblwmmaBuWGNUEJZ',
+  params: 'tbl2bjyftWkS5y0X'
 }

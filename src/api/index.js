@@ -8,7 +8,8 @@ import {
   getCommentsCount,
   addComment as larkAddComment,
   likeComment as larkLikeComment,
-  updateProductStats as larkUpdateProductStats
+  updateProductStats as larkUpdateProductStats,
+  getHotKeywords as larkGetHotKeywords
 } from './lark.js'
 import { mapProduct, mapCategory, mapCategoryDetail, mapCreator, mapComment } from '../utils/larkMapper.js'
 import { convertCloudImages } from '../utils/cloudImage.js'
@@ -142,11 +143,11 @@ export async function getProducts(query = {}) {
 }
 
 export async function getHotProducts() {
-  return getProducts({ sort: 'hot', pageSize: 20 })
+  return getProducts({ sort: 'hot', pageSize: 12 })
 }
 
 export async function getNewProducts() {
-  return getProducts({ sort: 'newest', pageSize: 20 })
+  return getProducts({ sort: 'newest', pageSize: 12 })
 }
 
 export async function getProductById(id) {
@@ -251,7 +252,11 @@ export async function getComments(productId) {
     if (records.length > 0) {
       records.forEach(r => console.log('[api] comment record id:', r.fields?.ID, 'parent_id:', r.fields?.parent_id))
     }
-    const comments = records.map(r => mapComment(r.fields, r.record_id))
+    const comments = records.map(r => {
+      const mapped = mapComment(r.fields, r.record_id)
+      console.log('[api] mapComment result id:', mapped.id, 'likes:', mapped.likes)
+      return mapped
+    })
 
     // Convert user avatars (cloud:// URLs)
     const avatarUrls = comments.filter(c => c.userAvatar?.startsWith('cloud://')).map(c => c.userAvatar)
@@ -294,5 +299,14 @@ export async function updateProductStats(productId, stats) {
     return await larkUpdateProductStats(productId, stats)
   } catch {
     return { success: true }
+  }
+}
+
+export async function getHotKeywords() {
+  try {
+    const keywords = await larkGetHotKeywords()
+    return { code: 0, data: keywords }
+  } catch {
+    return { code: 0, data: ['冰箱贴', '旅行图册', '手抄报', '鹅卵石'] }
   }
 }

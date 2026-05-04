@@ -4,7 +4,7 @@
       <view class="header-content">
         <text class="title">菓然手作</text>
         <view class="search-bar" @click="goSearch">
-          <text class="search-icon">🔍</text>
+          <image class="search-icon" src="/static/images/search.png" mode="aspectFit" />
           <text class="search-text">搜索手作好物</text>
         </view>
       </view>
@@ -247,7 +247,8 @@ onShow(async () => {
 }
 
 .search-icon {
-  font-size: 28rpx;
+  width: 28rpx;
+  height: 28rpx;
   margin-right: 16rpx;
 }
 

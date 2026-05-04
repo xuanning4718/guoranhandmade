@@ -3,7 +3,7 @@
     <view class="search-header" :style="{ paddingTop: navBarHeight + 'px' }">
       <view class="search-bar-wrap">
         <view class="search-bar">
-          <text class="search-icon">🔍</text>
+          <image class="search-icon" src="/static/images/search.png" mode="aspectFit" />
           <input
             class="search-input"
             placeholder="搜索手作好物"
@@ -91,13 +91,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import ProductCard from '../../components/ProductCard.vue'
-import { getProducts } from '../../api/index.js'
+import { getProducts, getHotKeywords } from '../../api/index.js'
 
 const keyword = ref('')
 const searchResults = ref([])
 const isSearching = ref(false)
 const navBarHeight = ref(0)
-const hotKeywords = ref(['蛋糕', '冰箱贴', '旅行图册', '手抄报', '鹅卵石'])
+const hotKeywords = ref([])
 const searchHistory = ref([])
 
 const searchResultsLeft = computed(() =>
@@ -124,7 +124,7 @@ function clearHistory() {
   })
 }
 
-onMounted(() => {
+onMounted(async () => {
   try {
     const history = uni.getStorageSync('search_history')
     searchHistory.value = history ? JSON.parse(history) : []
@@ -141,6 +141,14 @@ onMounted(() => {
     height = sysInfo.statusBarHeight + 40
   }
   navBarHeight.value = height
+
+  try {
+    const result = await getHotKeywords()
+    hotKeywords.value = result.data || []
+  } catch (err) {
+    console.warn('加载热门搜索失败:', err.message)
+    hotKeywords.value = ['冰箱贴', '旅行图册', '手抄报', '鹅卵石']
+  }
 })
 
 let searchTimer = null
@@ -229,7 +237,8 @@ function goBack() {
 }
 
 .search-icon {
-  font-size: 28rpx;
+  width: 28rpx;
+  height: 28rpx;
   margin-right: 16rpx;
 }
 
