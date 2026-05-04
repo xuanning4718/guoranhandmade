@@ -106,7 +106,7 @@ onMounted(async () => {
 }
 
 .scroll-content {
-  min-height: 100vh;
+  height: 100vh;
 }
 
 .creator-list {

@@ -258,7 +258,7 @@ onShow(async () => {
 }
 
 .scroll-content {
-  min-height: 100vh;
+  height: 100vh;
 }
 
 .banner-wrap {
