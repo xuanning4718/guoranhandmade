@@ -20,19 +20,25 @@
     >
       <view class="banner-wrap">
         <swiper class="banner-swiper" circular autoplay :interval="4000" :duration="500">
-          <swiper-item v-for="banner in banners" :key="banner.id">
-            <view class="banner-item" :style="{ background: bannerGradients[banner.id % bannerGradients.length] }">
-              <text class="banner-title">{{ banner.title }}</text>
-              <text class="banner-subtitle">{{ banner.subtitle }}</text>
+          <swiper-item v-for="banner in banners" :key="banner.id" @click="handleBannerClick(banner)">
+            <view class="banner-item">
+              <image
+                v-if="banner.image"
+                class="banner-image"
+                :src="banner.image"
+                mode="aspectFill"
+              />
+              <view v-else class="banner-gradient" :style="{ background: banner.background || bannerGradients[(banner.id - 1) % bannerGradients.length] }" />
+              <view v-if="banner.title || banner.subtitle" class="banner-overlay">
+                <text class="banner-title">{{ banner.title }}</text>
+                <text class="banner-subtitle">{{ banner.subtitle }}</text>
+              </view>
             </view>
           </swiper-item>
         </swiper>
       </view>
 
-      <view class="section">
-        <view class="section-header">
-          <text class="section-title">手作</text>
-        </view>
+      <view class="section category-section">
         <view class="category-grid">
           <view
             v-for="cat in categories"
@@ -142,7 +148,10 @@ const topCreators = computed(() =>
 const bannerGradients = [
   'linear-gradient(135deg, #E8D5BC 0%, #D5C4A8 100%)',
   'linear-gradient(135deg, #D5E8D4 0%, #B8D4B6 100%)',
-  'linear-gradient(135deg, #E8D4E5 0%, #D4B8D0 100%)'
+  'linear-gradient(135deg, #E8D4E5 0%, #D4B8D0 100%)',
+  'linear-gradient(135deg, #C4D4E8 0%, #A8B8D5 100%)',
+  'linear-gradient(135deg, #E8E0D4 0%, #D5C8B8 100%)',
+  'linear-gradient(135deg, #D4E8D8 0%, #B8D5C0 100%)'
 ]
 
 const hotProductsLeft = computed(() =>
@@ -197,10 +206,49 @@ function goCreatorList() {
   uni.navigateTo({ url: '/pages/creator-list/creator-list' })
 }
 
+function handleBannerClick(banner) {
+  if (!banner.linkType || banner.linkType === '纯展示') return
+
+  switch (banner.linkType) {
+    case '分类':
+      if (banner.linkValue) {
+        uni.setStorageSync('pendingCategory', parseInt(banner.linkValue))
+        uni.switchTab({ url: '/pages/category/category' })
+      }
+      break
+    case '作品':
+      if (banner.linkValue) {
+        const id = parseInt(banner.linkValue)
+        if (!isNaN(id)) {
+          uni.navigateTo({ url: `/pages/product/product?id=${id}` })
+        }
+      }
+      break
+    case '作者':
+      if (banner.linkValue) {
+        const id = parseInt(banner.linkValue)
+        if (!isNaN(id)) {
+          uni.navigateTo({ url: `/pages/creator/creator?id=${id}` })
+        }
+      }
+      break
+    case '链接':
+      if (banner.linkValue) {
+        uni.setClipboardData({
+          data: banner.linkValue,
+          success: () => {
+            uni.showToast({ title: '链接已复制', icon: 'success' })
+          }
+        })
+      }
+      break
+  }
+}
+
 onMounted(() => {
   const sysInfo = uni.getSystemInfoSync()
   statusBarHeight.value = sysInfo.statusBarHeight || 0
-  headerHeight.value = (sysInfo.statusBarHeight || 0) + 120
+    headerHeight.value = (sysInfo.statusBarHeight || 0) + 100
   loadData()
 })
 
@@ -226,7 +274,7 @@ onShow(async () => {
 }
 
 .header-content {
-  padding: 20rpx 32rpx;
+  padding: 12rpx 32rpx;
 }
 
 .title {
@@ -262,17 +310,37 @@ onShow(async () => {
 }
 
 .banner-wrap {
-  padding: 24rpx 32rpx;
+  padding: 8rpx 32rpx 0;
 }
 
 .banner-swiper {
-  height: 280rpx;
+  height: 300rpx;
   border-radius: 16px;
   overflow: hidden;
 }
 
 .banner-item {
   height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.banner-image {
+  width: 100%;
+  height: 100%;
+}
+
+.banner-gradient {
+  width: 100%;
+  height: 100%;
+}
+
+.banner-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -292,7 +360,7 @@ onShow(async () => {
 }
 
 .section {
-  padding: 32rpx;
+  padding: 40rpx 32rpx;
   padding-top: 0;
 }
 
@@ -312,6 +380,10 @@ onShow(async () => {
 .section-more {
   font-size: 24rpx;
   color: #4a6741;
+}
+
+.category-section {
+  padding-top: 24rpx;
 }
 
 .category-grid {

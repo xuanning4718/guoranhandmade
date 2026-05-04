@@ -1,6 +1,22 @@
 <template>
-  <view v-if="creator" class="creator-page">
-    <scroll-view scroll-y class="scroll-content">
+  <view class="creator-page">
+    <view v-if="loading" class="loading-state">
+      <text class="loading-text">加载中...</text>
+    </view>
+
+    <view v-else-if="error" class="error-state">
+      <text class="error-icon">⚠️</text>
+      <text class="error-text">{{ error }}</text>
+      <button class="retry-btn" @click="loadData">重试</button>
+    </view>
+
+    <view v-else-if="!creator" class="empty-state">
+      <text class="empty-icon">🔍</text>
+      <text class="empty-text">未找到创作者</text>
+      <button class="back-btn" @click="goBack">返回</button>
+    </view>
+
+    <scroll-view v-else scroll-y class="scroll-content" @scrolltolower="loadMore" :lower-threshold="100">
       <view class="cover-section" :style="{ background: coverGradient }">
         <view class="creator-avatar" :style="{ backgroundColor: avatarColor }">
           <text class="avatar-text">{{ creator.name.charAt(0) }}</text>
@@ -47,22 +63,36 @@
       <view class="works-section">
         <view class="section-header">
           <text class="section-title">全部作品</text>
-          <text class="works-count">({{ works.length }})</text>
         </view>
         <view class="product-grid">
-          <ProductCard
-            v-for="product in works"
-            :key="product.id"
-            :product="product"
-          />
+          <view class="product-column">
+            <ProductCard
+              v-for="product in worksLeft"
+              :key="product.id"
+              :product="product"
+            />
+          </view>
+          <view class="product-column">
+            <ProductCard
+              v-for="product in worksRight"
+              :key="product.id"
+              :product="product"
+            />
+          </view>
         </view>
-        <view v-if="works.length === 0" class="empty-works">
+        <view v-if="works.length === 0 && !isLoadingMore" class="empty-works">
           <text class="empty-text">暂无作品</text>
+        </view>
+        <view v-if="isLoadingMore" class="load-more">
+          <text class="loading-text">加载中...</text>
+        </view>
+        <view v-if="!hasMore && works.length > 0" class="load-more">
+          <text>没有更多了</text>
         </view>
       </view>
     </scroll-view>
 
-    <view v-if="showQRModal" class="qr-mask" @click="closeQR">
+    <view v-if="showQRModal && creator" class="qr-mask" @click="closeQR">
       <view class="qr-panel" @click.stop>
         <image class="qr-image" :src="creator.wechatQR" mode="aspectFit" />
         <text class="qr-hint">长按保存图片</text>
@@ -83,6 +113,11 @@ const creator = ref(null)
 const works = ref([])
 const creatorId = ref(0)
 const showQRModal = ref(false)
+const loading = ref(false)
+const error = ref('')
+const currentPage = ref(1)
+const hasMore = ref(true)
+const isLoadingMore = ref(false)
 
 const isFollowed = computed(() => favoriteStore.isCreatorFavorited(creatorId.value))
 
@@ -102,6 +137,14 @@ const levelClass = computed(() => {
   }
   return map[creator.value?.level] || 'level-new'
 })
+
+const worksLeft = computed(() =>
+  works.value.filter((_, i) => i % 2 === 0)
+)
+
+const worksRight = computed(() =>
+  works.value.filter((_, i) => i % 2 === 1)
+)
 
 const totalSales = computed(() =>
   works.value.reduce((sum, w) => sum + (w.sales || 0), 0)
@@ -136,19 +179,81 @@ function closeQR() {
   showQRModal.value = false
 }
 
-onMounted(async () => {
+function goBack() {
+  uni.navigateBack()
+}
+
+async function loadCreator() {
+  if (!creatorId.value) {
+    error.value = '缺少创作者ID'
+    return
+  }
+
+  loading.value = true
+  error.value = ''
+  
+  try {
+    const creatorRes = await getCreatorById(creatorId.value)
+    creator.value = creatorRes.data
+
+    if (!creator.value) {
+      error.value = '未找到该创作者'
+    }
+  } catch (e) {
+    error.value = '加载失败，请重试'
+    console.error('Failed to load creator:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadWorks(isLoadMore = false) {
+  if (isLoadingMore.value || !hasMore.value) return
+  
+  isLoadingMore.value = true
+  
+  try {
+    const productsRes = await getProducts({
+      creatorId: creatorId.value,
+      page: currentPage.value,
+      pageSize: 12
+    })
+
+    if (productsRes.data.length < 12) {
+      hasMore.value = false
+    }
+
+    works.value = [...works.value, ...productsRes.data]
+    currentPage.value++
+  } catch (e) {
+    console.error('Failed to load works:', e)
+  } finally {
+    isLoadingMore.value = false
+  }
+}
+
+async function loadData() {
+  await loadCreator()
+  if (creator.value) {
+    await loadWorks()
+  }
+}
+
+async function loadMore() {
+  if (!hasMore.value || isLoadingMore.value) return
+  await loadWorks(true)
+}
+
+onMounted(() => {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
-  creatorId.value = parseInt(currentPage.options?.id || '0')
-
-  if (!creatorId.value) return
-
-  const creatorRes = await getCreatorById(creatorId.value)
-  creator.value = creatorRes.data
-
-  if (creator.value) {
-    const productsRes = await getProducts({ creatorId: creatorId.value })
-    works.value = productsRes.data
+  const idParam = currentPage.options?.id
+  
+  if (idParam) {
+    creatorId.value = parseInt(idParam)
+    loadData()
+  } else {
+    error.value = '缺少创作者ID'
   }
 })
 </script>
@@ -160,7 +265,7 @@ onMounted(async () => {
 }
 
 .scroll-content {
-  min-height: 100vh;
+  height: 100vh;
 }
 
 .cover-section {
@@ -371,8 +476,22 @@ onMounted(async () => {
 
 .product-grid {
   display: flex;
+  padding: 0 24rpx;
+  gap: 24rpx;
+}
+
+.product-column {
+  flex: 1;
+  display: flex;
   flex-direction: column;
   gap: 24rpx;
+}
+
+.load-more {
+  text-align: center;
+  padding: 32rpx;
+  font-size: 24rpx;
+  color: #999;
 }
 
 .empty-works {
@@ -418,5 +537,49 @@ onMounted(async () => {
   font-size: 24rpx;
   color: #999;
   margin-top: 16rpx;
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 64rpx 32rpx;
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.error-icon,
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 24rpx;
+}
+
+.error-text,
+.empty-text {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 32rpx;
+}
+
+.retry-btn,
+.back-btn {
+  background: #4a6741;
+  color: #fff;
+  border-radius: 40rpx;
+  padding: 16rpx 48rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
+.retry-btn::after,
+.back-btn::after {
+  border: none;
 }
 </style>

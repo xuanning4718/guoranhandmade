@@ -9,7 +9,8 @@ import {
   addComment as larkAddComment,
   likeComment as larkLikeComment,
   updateProductStats as larkUpdateProductStats,
-  getHotKeywords as larkGetHotKeywords
+  getBanners as larkGetBanners,
+  getCommentEnabled as larkGetCommentEnabled
 } from './lark.js'
 import { mapProduct, mapCategory, mapCategoryDetail, mapCreator, mapComment } from '../utils/larkMapper.js'
 import { convertCloudImages } from '../utils/cloudImage.js'
@@ -21,7 +22,28 @@ function delay(ms = 300) {
 }
 
 export async function getBanners() {
-  return { code: 0, data: mockBanners }
+  try {
+    const records = await larkGetBanners()
+    const enabledBanners = records.filter(b => b.enabled)
+
+    const imageUrls = enabledBanners.filter(b => b.image?.startsWith('cloud://')).map(b => b.image)
+    if (imageUrls.length > 0) {
+      const converted = await convertCloudImages(imageUrls)
+      let idx = 0
+      enabledBanners.forEach(b => {
+        if (b.image?.startsWith('cloud://')) {
+          b.image = converted[idx] || b.image
+          idx++
+        }
+      })
+    }
+
+    enabledBanners.sort((a, b) => a.sortOrder - b.sortOrder)
+    return { code: 0, data: enabledBanners }
+  } catch (err) {
+    console.warn('飞书Banner失败，降级:', err.message)
+    return { code: 0, data: mockBanners }
+  }
 }
 
 async function getProductsFallback(query = {}) {
@@ -114,16 +136,12 @@ export async function getProducts(query = {}) {
       )
     }
 
-    if (query.sort === 'hot') {
-      result.sort((a, b) => {
-        const scoreA = 3 * (a.favorites || 0) + 5 * (a.comments || 0) + (a.views || 0)
-        const scoreB = 3 * (b.favorites || 0) + 5 * (b.comments || 0) + (b.views || 0)
-        return scoreB - scoreA
-      })
+    if (query.sort === 'sales') {
+      result.sort((a, b) => (b.comments || 0) - (a.comments || 0))
     } else if (query.sort === 'newest') {
       result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     } else {
-      result.sort((a, b) => b.sortOrder - a.sortOrder)
+      result.sort((a, b) => (b.favorites || 0) - (a.favorites || 0))
     }
 
     for (const p of result) {
@@ -188,16 +206,11 @@ export async function getCreatorById(id) {
   const numId = typeof id === 'string' ? parseInt(id) : id
   try {
     const records = await larkGetCreators()
-    const record = records.find(r => {
-      const fields = r.fields
-      const creatorId = parseInt(fields?.id || '0')
-      return creatorId === numId
-    })
+    if (numId < 1 || numId > records.length) throw new Error('Creator not found')
 
-    if (!record) throw new Error('Creator not found')
-
+    const record = records[numId - 1]
     const products = await larkGetProducts()
-    const creator = mapCreator(record.fields, 0, products.map(p => mapProduct(p.fields)))
+    const creator = mapCreator(record.fields, numId - 1, products.map(p => mapProduct(p.fields)))
     creator.images = await convertCloudImages(creator.images)
 
     return { code: 0, data: creator }
@@ -248,15 +261,7 @@ export async function getCreators() {
 export async function getComments(productId) {
   try {
     const records = await larkGetComments(productId)
-    console.log('[api] getComments raw records from lark:', records.length)
-    if (records.length > 0) {
-      records.forEach(r => console.log('[api] comment record id:', r.fields?.ID, 'parent_id:', r.fields?.parent_id))
-    }
-    const comments = records.map(r => {
-      const mapped = mapComment(r.fields, r.record_id)
-      console.log('[api] mapComment result id:', mapped.id, 'likes:', mapped.likes)
-      return mapped
-    })
+    const comments = records.map(r => mapComment(r.fields, r.record_id))
 
     // Convert user avatars (cloud:// URLs)
     const avatarUrls = comments.filter(c => c.userAvatar?.startsWith('cloud://')).map(c => c.userAvatar)
@@ -308,5 +313,14 @@ export async function getHotKeywords() {
     return { code: 0, data: keywords }
   } catch {
     return { code: 0, data: ['冰箱贴', '旅行图册', '手抄报', '鹅卵石'] }
+  }
+}
+
+export async function getCommentEnabled() {
+  try {
+    const enabled = await larkGetCommentEnabled()
+    return { code: 0, data: enabled }
+  } catch {
+    return { code: 0, data: true }
   }
 }

@@ -1,5 +1,6 @@
 import { LARK_CONFIG, TABLE_IDS } from '../config/lark.js'
 import { getCachedData, setCachedData } from '../utils/cache.js'
+import { mapBanner } from '../utils/larkMapper.js'
 
 const BASE_URL = 'https://open.feishu.cn/open-apis'
 
@@ -174,27 +175,16 @@ export async function getCreators() {
 
 export async function getComments(productId) {
   const all = await fetchAllRecords(TABLE_IDS.comments)
-  console.log('[lark] getComments total fetched:', all.length)
-  if (all.length > 0) {
-    console.log('[lark] getComments sample likes:', JSON.stringify(all[0]?.fields?.likes))
-  }
   
   if (productId === undefined || productId === null || productId === '') {
-    console.warn('[lark] getComments: productId is missing, returning empty')
     return []
   }
   
-  const filtered = all.filter(r => {
+  return all.filter(r => {
     const fields = r.fields
     const recordProductId = fields?.product_id ?? fields?.productId
-    const match = parseInt(recordProductId) === parseInt(productId)
-    if (match) {
-      console.log('[lark] getComments MATCH id:', fields?.ID, 'parent_id:', fields?.parent_id)
-    }
-    return match
+    return parseInt(recordProductId) === parseInt(productId)
   })
-  console.log('[lark] getComments filtered for product', productId, ':', filtered.length)
-  return filtered
 }
 
 async function fetchComments() {
@@ -224,13 +214,9 @@ export async function addComment(comment) {
     }
   }
 
-  console.log('[lark] addComment received parentId:', comment.parentId, 'typeof:', typeof comment.parentId)
   if (comment.parentId && comment.parentId !== '0' && comment.parentId !== 0) {
     record.fields.parent_id = parseInt(comment.parentId)
-    console.log('[lark] addComment setting parent_id to:', record.fields.parent_id)
   }
-
-  console.log('[lark] addComment full record:', JSON.stringify(record))
 
   return request(
     `/bitable/v1/apps/${LARK_CONFIG.appToken}/tables/${TABLE_IDS.comments}/records`,
@@ -243,12 +229,10 @@ export async function likeComment(commentId) {
   try {
     const records = await fetchComments()
     if (records.length === 0) {
-      console.warn('[lark] likeComment: no records fetched')
       return null
     }
 
     const commentIdStr = String(commentId).replace(/^0+/, '')
-    console.log('[lark] likeComment: searching for commentId', commentId)
 
     const target = records.find(r => {
       const rawId = r.fields?.ID || ''
@@ -259,17 +243,10 @@ export async function likeComment(commentId) {
     })
 
     if (!target) {
-      console.warn('[lark] likeComment: target not found for id', commentId)
-      const samples = records.slice(0, 3).map(r => ({
-        record_id: r.record_id,
-        ID: r.fields?.ID
-      }))
-      console.warn('[lark] likeComment: sample records:', JSON.stringify(samples))
       return null
     }
 
     const rawLikes = target.fields?.likes
-    console.log('[lark] likeComment: raw likes field:', JSON.stringify(rawLikes))
     const currentLikes = rawLikes && typeof rawLikes === 'object'
       ? parseInt(rawLikes.text || '0')
       : parseInt(rawLikes || '0')
@@ -279,8 +256,6 @@ export async function likeComment(commentId) {
         likes: newLikes
       }
     }
-
-    console.log('[lark] likeComment: updating record_id', target.record_id, 'likes from', currentLikes, 'to', newLikes)
 
     return request(
       `/bitable/v1/apps/${LARK_CONFIG.appToken}/tables/${TABLE_IDS.comments}/records/${target.record_id}`,
@@ -313,6 +288,23 @@ export async function updateProductStats(productId, stats) {
   )
 }
 
+export async function getBanners() {
+  const cacheKey = 'lark_banners'
+  const cached = getCachedData(cacheKey)
+  if (cached && cached.length > 0) return cached
+
+  try {
+    const records = await fetchAllRecords(TABLE_IDS.banners)
+    const mapped = records.map(r => mapBanner(r.fields))
+    if (mapped.length > 0) {
+      setCachedData(cacheKey, mapped)
+    }
+    return mapped
+  } catch {
+    return []
+  }
+}
+
 export async function getHotKeywords(forceRefresh = false) {
   const cacheKey = 'lark_hot_keywords'
   const cached = getCachedData(cacheKey)
@@ -340,5 +332,31 @@ export async function getHotKeywords(forceRefresh = false) {
   } catch (err) {
     console.warn('获取热门搜索关键词失败，使用默认值:', err.message)
     return defaultKeywords
+  }
+}
+
+export async function getCommentEnabled(forceRefresh = false) {
+  const cacheKey = 'lark_comment_enabled'
+  const cached = getCachedData(cacheKey)
+  if (cached !== null && !forceRefresh) return cached
+  
+  try {
+    const records = await fetchAllRecords(TABLE_IDS.params)
+    const commentRecord = records.find(r => {
+      const paramName = r.fields?.['参数']
+      return paramName !== undefined && paramName !== null && paramName.toString().trim() === '是否开启作品评论'
+    })
+    
+    let enabled = true
+    if (commentRecord) {
+      const paramVal = commentRecord.fields?.['参数值']
+      enabled = paramVal === 1 || paramVal === '1'
+    }
+    
+    setCachedData(cacheKey, enabled)
+    return enabled
+  } catch (err) {
+    console.warn('[lark] getCommentEnabled failed, defaulting to true:', err.message)
+    return true
   }
 }

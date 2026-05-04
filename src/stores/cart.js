@@ -14,6 +14,21 @@ function loadWishlist() {
   }
 }
 
+function formatAddedAt() {
+  const now = new Date()
+  const thisYear = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  let item = {
+    display: `${m}/${d} ${hh}:${mm}`,
+    timestamp: now.getTime(),
+    year: thisYear
+  }
+  return item
+}
+
 export const useWishlistStore = defineStore('wishlist', () => {
   const items = ref(loadWishlist())
   const totalCount = computed(() => items.value.length)
@@ -28,6 +43,13 @@ export const useWishlistStore = defineStore('wishlist', () => {
       return false
     }
 
+    const now = new Date()
+    const thisYear = now.getFullYear()
+    const m = String(now.getMonth() + 1).padStart(2, '0')
+    const d = String(now.getDate()).padStart(2, '0')
+    const hh = String(now.getHours()).padStart(2, '0')
+    const mm = String(now.getMinutes()).padStart(2, '0')
+
     items.value.unshift({
       productId: id,
       title: product.title,
@@ -35,10 +57,11 @@ export const useWishlistStore = defineStore('wishlist', () => {
       creatorId: product.creatorId,
       category: product.category,
       tags: product.tags || [],
-      addedAt: new Date().toISOString().split('T')[0]
+      addedAt: `${m}/${d} ${hh}:${mm}`,
+      addedAtTs: now.getTime(),
+      addedAtYr: thisYear
     })
 
-    console.log('[wishlist] saved item:', JSON.stringify(items.value[0]))
     save()
     return true
   }

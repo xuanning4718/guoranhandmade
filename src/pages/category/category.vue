@@ -36,9 +36,23 @@
             <text class="tab-text">{{ sub.detName }}</text>
           </view>
         </scroll-view>
-        <view class="sort-trigger" @click="showSortPicker">
-          <text class="sort-text">{{ sortLabels[currentSort] }}</text>
-          <text class="sort-arrow">▼</text>
+        <view class="sort-wrapper">
+          <view class="sort-trigger" :class="{ active: showSortMenu }" @click="toggleSortMenu">
+            <text class="sort-text">{{ sortLabels[currentSort] }}</text>
+            <text class="sort-arrow" :class="{ rotate: showSortMenu }">▼</text>
+          </view>
+          <view v-if="showSortMenu" class="sort-overlay" @click="toggleSortMenu"></view>
+          <view v-if="showSortMenu" class="sort-dropdown">
+            <view
+              v-for="(label, key) in sortLabels"
+              :key="key"
+              class="sort-option"
+              :class="{ active: currentSort === key }"
+              @click="selectSort(key)"
+            >
+              <text class="sort-option-text">{{ label }}</text>
+            </view>
+          </view>
         </view>
       </view>
 
@@ -68,7 +82,6 @@
             v-for="sub in subCategories"
             :key="sub.detId"
             :id="'group-' + sub.detId"
-            v-show="activeDet === 0 || activeDet === sub.detId"
             class="sub-group"
           >
             <view class="sub-header" :id="'sub-' + sub.detId">
@@ -143,7 +156,9 @@ const isLoading = ref(false)
 const scrollTarget = ref('')
 const scrollInto = ref('')
 const activeDet = ref(0)
+const showSortMenu = ref(false)
 let scrollTimeout = null
+let isAnchorScrolling = false
 
 const sortLabels = {
   default: '推荐',
@@ -182,21 +197,19 @@ async function loadProducts(isLoadMore = false) {
   const hasSub = subCategories.value.length > 0
   const query = {
     page: currentPage.value,
-    pageSize: hasSub ? 500 : 20
+    pageSize: hasSub ? 9999 : 12
   }
 
   if (selectedCategory.value) {
     query.category = selectedCategory.value
   }
-  if (currentSort.value !== 'default') {
-    query.sort = currentSort.value
-  }
+  query.sort = currentSort.value
 
   const result = await getProducts(query)
-  let sampleProducts = result.data.slice(0, 2).map(p => ({ id: p.id, title: p.title, category: p.category, detId: p.detId }))
-  console.log('[category] loadProducts result:', result.data.length, 'samples:', JSON.stringify(sampleProducts))
 
-  if (result.data.length < 20) {
+  if (hasSub) {
+    hasMore.value = false
+  } else if (result.data.length < 12) {
     hasMore.value = false
   }
 
@@ -213,15 +226,18 @@ function selectSubCategory(detId) {
   selectedDet.value = detId
   activeDet.value = detId
   scrollTarget.value = 'sub-' + detId
+  isAnchorScrolling = true
+  setTimeout(() => {
+    isAnchorScrolling = false
+  }, 600)
 }
 
 function onScroll(e) {
-  if (scrollTimeout) return
+  if (scrollTimeout || isAnchorScrolling) return
   scrollTimeout = setTimeout(() => {
     scrollTimeout = null
   }, 200)
 
-  const scrollTop = e.detail.scrollTop
   if (subCategories.value.length === 0) return
 
   const query = uni.createSelectorQuery()
@@ -230,13 +246,21 @@ function onScroll(e) {
   }
   query.exec(res => {
     if (!res || res.length === 0) return
+
+    let bestIndex = -1
+    let bestTop = -Infinity
+
     for (let i = 0; i < subCategories.value.length; i++) {
-      if (res[i] && res[i].top - scrollTop < 120) {
-        if (selectedDet.value !== subCategories.value[i].detId) {
-          selectedDet.value = subCategories.value[i].detId
+      if (res[i] && res[i].top <= 120) {
+        if (res[i].top > bestTop) {
+          bestTop = res[i].top
+          bestIndex = i
         }
-        break
       }
+    }
+
+    if (bestIndex >= 0 && selectedDet.value !== subCategories.value[bestIndex].detId) {
+      selectedDet.value = subCategories.value[bestIndex].detId
     }
   })
 }
@@ -249,29 +273,21 @@ function changeSort(sort) {
   loadProducts()
 }
 
-function showSortPicker() {
-  uni.showActionSheet({
-    itemList: Object.values(sortLabels),
-    success: (res) => {
-      const keys = Object.keys(sortLabels)
-      changeSort(keys[res.tapIndex])
-    }
-  })
+function toggleSortMenu() {
+  showSortMenu.value = !showSortMenu.value
+}
+
+function selectSort(key) {
+  showSortMenu.value = false
+  changeSort(key)
 }
 
 function getProductsByDetId(detId) {
-  if (detId == null) return []
   const numDetId = typeof detId === 'string' ? parseInt(detId) : detId
-  const matchedProducts = products.value.filter(p => {
-    if (p.detId == null || p.detId === undefined) return false
+  return products.value.filter(p => {
     const pDetId = typeof p.detId === 'string' ? parseInt(p.detId) : p.detId
     return pDetId === numDetId
   })
-  // 如果没有匹配到任何产品，说明飞书商品表的 det_id 字段未填，返回该分类下的所有产品
-  if (matchedProducts.length === 0) {
-    return products.value
-  }
-  return matchedProducts
 }
 
 function getProductsByDetIdSplit(detId, col) {
@@ -454,6 +470,71 @@ watch([selectedCategory, currentSort], async () => {
 .sort-arrow {
   font-size: 20rpx;
   color: #4a6741;
+  transition: transform 0.2s;
+}
+
+.sort-arrow.rotate {
+  transform: rotate(180deg);
+}
+
+.sort-trigger.active {
+  background: #4a6741;
+}
+
+.sort-trigger.active .sort-text,
+.sort-trigger.active .sort-arrow {
+  color: #fff;
+}
+
+.sort-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sort-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+}
+
+.sort-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  background: #fff;
+  border-radius: 8rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  margin-top: 8rpx;
+  min-width: 120rpx;
+}
+
+.sort-option {
+  padding: 20rpx 28rpx;
+  text-align: center;
+}
+
+.sort-option:active {
+  background: #faf7f2;
+}
+
+.sort-option.active {
+  background: #faf7f2;
+}
+
+.sort-option.active .sort-option-text {
+  color: #4a6741;
+  font-weight: 600;
+}
+
+.sort-option-text {
+  font-size: 26rpx;
+  color: #333;
 }
 
 .sort-bar {

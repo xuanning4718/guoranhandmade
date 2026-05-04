@@ -118,8 +118,8 @@ export function mapCategoryDetail(record) {
   }
 }
 
-export function mapCreator(record, creatorCount = 0, products = []) {
-  const id = creatorCount + 1
+export function mapCreator(record, index = 0, products = []) {
+  const id = parseInt(getField(record, 'id', '文本') || String(index + 1))
   const worksCount = products.filter(p => p.creatorId === id).length
 
   return {
@@ -134,12 +134,39 @@ export function mapCreator(record, creatorCount = 0, products = []) {
   }
 }
 
-export function mapComment(record, recordId = '') {
-  const rawId = getField(record, 'ID') || ''
-  const parsedId = parseInt(String(rawId).replace(/\D/g, '')) || 0
+export function mapBanner(record) {
+  const status = getField(record, '状态')
+  const linkTypeArr = getField(record, '跳转类型')
+  const linkType = Array.isArray(linkTypeArr) ? (linkTypeArr[0] || '纯展示') : (linkTypeArr || '纯展示')
+
+  let linkValue = ''
+  if (linkType === '分类') {
+    linkValue = getField(record, '分类') || ''
+  } else if (linkType === '作品') {
+    linkValue = getField(record, '作品') || ''
+  } else if (linkType === '作者') {
+    linkValue = getField(record, '作者') || ''
+  } else if (linkType === '链接') {
+    linkValue = getField(record, '路径') || ''
+  }
 
   return {
-    id: parsedId,
+    id: parseInt(getField(record, '序号') || '0'),
+    code: getField(record, '广告位编号') || '',
+    title: getField(record, '标题') || '',
+    subtitle: getField(record, '描述') || '',
+    image: getField(record, '图片') || '',
+    background: getField(record, '背景色') || '',
+    linkType,
+    linkValue,
+    enabled: status === '开启',
+    sortOrder: parseInt(getField(record, '排序') || '0')
+  }
+}
+
+export function mapComment(record, recordId = '') {
+  return {
+    id: parseInt(getField(record, 'ID') || '0'),
     recordId,
     productId: parseInt(getField(record, 'product_id') || '0'),
     userId: parseInt(getField(record, 'user_id') || '0'),
@@ -147,8 +174,8 @@ export function mapComment(record, recordId = '') {
     userAvatar: getField(record, 'user_avatar') || '',
     content: getField(record, 'content') || '',
     images: parseImageField(getField(record, 'images')),
-    likes: parseNumberField(getField(record, 'likes')),
+    likes: parseInt(getField(record, 'likes') || '0'),
     createdAt: getField(record, 'time') || '',
-    parentId: String(getField(record, 'parent_id', 'para_id') || '0')
+    parentId: parseInt(getField(record, 'parent_id') || '0')
   }
 }

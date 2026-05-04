@@ -10,5 +10,6 @@ export const TABLE_IDS = {
   creators: 'tbl0mBur9CJPldrq',
   comments: 'tblP2MVGSpu23njx',
   categoryDets: 'tblwmmaBuWGNUEJZ',
+  banners: 'tbllWOXoQOT5N7CY',
   params: 'tbl2bjyftWkS5y0X'
 }

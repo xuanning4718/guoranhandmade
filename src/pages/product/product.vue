@@ -76,7 +76,7 @@
         </view>
       </view>
 
-      <view class="comment-section">
+      <view v-if="commentEnabled" class="comment-section">
         <view class="section-header">
           <text class="section-title">评价</text>
           <text v-if="comments.length > 0" class="comment-count">({{ comments.length }})</text>
@@ -239,7 +239,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useWishlistStore } from '../../stores/cart.js'
 import { useFavoriteStore } from '../../stores/favorite.js'
-import { getProductById, getCreators, getComments, addComment, likeComment as likeCommentApi } from '../../api/index.js'
+import { getProductById, getCreators, getComments, addComment, likeComment as likeCommentApi, getCommentEnabled } from '../../api/index.js'
 import { getUserInfo, isProfileComplete, updateProfile, uploadAvatarToCloud } from '../../services/auth.js'
 import { mockData } from '../../api/mockData.js'
 import { formatRelativeTime } from '../../utils/formatTime.js'
@@ -272,6 +272,7 @@ const pendingReplyToId = ref(null)
 
 const replyToId = ref(null)
 const replyText = ref('')
+const commentEnabled = ref(true)
 
 const placeholderColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
 
@@ -412,7 +413,6 @@ async function loadData() {
     creator.value = productRes.creator
 
     const commentData = await getComments(productId.value)
-    console.log('[product] loadData comments:', commentData)
     if (commentData.data && Array.isArray(commentData.data)) {
       comments.value = commentData.data
     }
@@ -578,8 +578,6 @@ async function submitReply(parentId) {
     return
   }
 
-  console.log('[product] submitReply: parentId=', parentId, 'type:', typeof parentId)
-
   const userInfo = getUserInfo()
   const reply = {
     productId: parseInt(productId.value),
@@ -590,8 +588,6 @@ async function submitReply(parentId) {
     content: replyText.value,
     createdAt: new Date().toISOString()
   }
-
-  console.log('[product] submitReply object:', JSON.stringify(reply))
 
   try {
     uni.showLoading({ title: '发布中...' })
@@ -656,7 +652,6 @@ async function refreshComments() {
     const result = await getComments(productId.value)
     if (result.data && Array.isArray(result.data)) {
       comments.value = result.data
-      console.log('[product] refreshComments: loaded', result.data.length, 'comments')
     }
   } catch (err) {
     console.error('[product] refreshComments failed:', err)
@@ -664,7 +659,7 @@ async function refreshComments() {
 }
 
 function previewImage(url) {
-  uni.previewImage({ urls: product.images, current: url })
+  uni.previewImage({ urls: product.value.images, current: url })
 }
 
 function formatDate(value) {
@@ -721,10 +716,15 @@ function contactCreator() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
   productId.value = parseInt(currentPage.options?.id || '0')
+
+  const commentRes = await getCommentEnabled()
+  commentEnabled.value = commentRes.data
+  console.log('[product] commentEnabled set to:', commentEnabled.value, 'from res:', JSON.stringify(commentRes))
+
   loadData()
 })
 </script>

@@ -3,7 +3,6 @@ import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
 import { clearAllCache } from './utils/cache.js'
 
 onLaunch(() => {
-  console.log('App Launch')
   clearAllCache()
   wx.cloud.init({
     env: 'cloud1-6geuw2dr3aa3bd50',
@@ -12,11 +11,9 @@ onLaunch(() => {
 })
 
 onShow(() => {
-  console.log('App Show')
 })
 
 onHide(() => {
-  console.log('App Hide')
 })
 </script>
 

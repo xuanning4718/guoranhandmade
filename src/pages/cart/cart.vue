@@ -2,8 +2,15 @@
   <view class="wishlist-page">
     <view v-if="wishlistItems.length > 0" class="wishlist-content">
       <view v-for="item in wishlistItems" :key="item.productId" class="wishlist-item">
-        <view class="item-image" :style="{ backgroundColor: itemColors[item.productId % itemColors.length] }">
-          <text class="placeholder-text">{{ item.title.charAt(0) }}</text>
+        <view class="item-image" :style="{ backgroundColor: itemColors[item.productId % itemColors.length] }" @click="viewProduct(item.productId)">
+          <image
+            v-if="item.image"
+            class="product-img"
+            :src="item.image"
+            mode="aspectFill"
+            @error="onImageError(item)"
+          />
+          <text v-else class="placeholder-text">{{ item.title.charAt(0) }}</text>
         </view>
         <view class="item-info">
           <text class="item-title">{{ item.title }}</text>
@@ -11,7 +18,7 @@
             <text v-for="tag in (item.tags || []).slice(0, 2)" :key="tag" class="tag">{{ tag }}</text>
           </view>
           <view class="item-footer">
-            <text class="item-date">加入于 {{ item.addedAt }}</text>
+            <text class="item-date">加入于 {{ formatItemDate(item) }}</text>
             <view class="item-actions">
               <view class="action-view" @click="viewProduct(item.productId)">
                 <text>查看</text>
@@ -45,6 +52,15 @@ const itemColors = [
   '#E8D5BC', '#D5E8D4', '#E8D4E5', '#D4E5E8', '#E5D4C4', '#D4DCE8'
 ]
 
+const currentYear = new Date().getFullYear()
+
+function formatItemDate(item) {
+  if (item.addedAtYr && item.addedAtYr !== currentYear) {
+    return `${item.addedAtYr}/${item.addedAt}`
+  }
+  return item.addedAt
+}
+
 function goBrowse() {
   uni.switchTab({ url: '/pages/index/index' })
 }
@@ -53,6 +69,10 @@ function viewProduct(productId) {
   uni.navigateTo({
     url: `/pages/product/product?id=${productId}`
   })
+}
+
+function onImageError(item) {
+  item.image = ''
 }
 
 function removeItem(productId) {
@@ -98,6 +118,12 @@ function removeItem(productId) {
   justify-content: center;
   margin-right: 24rpx;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.product-img {
+  width: 100%;
+  height: 100%;
 }
 
 .placeholder-text {

@@ -6,6 +6,7 @@
         class="product-image"
         :src="lastImage"
         mode="aspectFill"
+        lazy-load
         @error="onImageError"
       />
       <view v-else class="image-placeholder" :class="'placeholder-' + (category?.id || 'default')">

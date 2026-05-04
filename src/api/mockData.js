@@ -33,9 +33,9 @@ const creators = [
 const products = [
   { id: 1, title: '儿童水彩画 | 我的家', price: 100, originalPrice: null, images: [`${CLOUD_BASE}/儿童水彩画-我的家.jpg`], category: 1, detId: 101, tags: ['儿童画', '水彩', '原创'], creatorId: 1, description: '5岁小朋友以"我的家"为主题创作的水彩画。大胆的色彩运用，充满了童真和想象力。', stock: 1, views: 0, favorites: 0, sales: 0, createdAt: '2026-03-15' },
   { id: 2, title: '儿童创意画 | 海底世界', price: 95, originalPrice: null, images: [`${CLOUD_BASE}/儿童创意画-海底世界.jpg`], category: 1, detId: 101, tags: ['儿童画', '创意', '原创'], creatorId: 1, description: '6岁小朋友以"我家附近的海"为主题创作。色彩丰富，充满了童趣和想象力。', stock: 2, views: 0, favorites: 0, sales: 0, createdAt: '2026-03-18' },
-  { id: 3, title: '阳光下的骑行者', price: 90, originalPrice: null, images: [`${CLOUD_BASE}/阳光下的骑行者1.jpg`, `${CLOUD_BASE}/阳光下的骑行者2.jpg`, `${CLOUD_BASE}/阳光下的骑行者3.jpg`], category: 8, detId: null, tags: ['少女', '彩铅', '复古'], creatorId: 7, description: '用彩铅描绘夕阳下骑车的少年，带着一丝复古的诗意与自由感。', stock: 1, views: 0, favorites: 0, sales: 0, createdAt: '2026-03-10' },
-  { id: 4, title: '海边的影子', price: 88, originalPrice: null, images: [`${CLOUD_BASE}/海边的影子.jpg`], category: 8, detId: null, tags: ['剪影', '暖色调', '风景'], creatorId: 7, description: '丘陵、大树、海滩、小屋，一副带着暖色调的剪影世界。', stock: 1, views: 0, favorites: 0, sales: 0, createdAt: '2026-03-12' },
-  { id: 5, title: '夏日午后', price: 86, originalPrice: null, images: [`${CLOUD_BASE}/夏日午后.jpg`], category: 2, detId: 203, tags: ['铅笔', '生活', '风景'], creatorId: 7, description: '阳台上晒的衣服、脚踏车、小草地，用黑白铅笔记录下平凡生活中的诗意。', stock: 1, views: 0, favorites: 0, sales: 0, createdAt: '2026-03-16' },
+  { id: 3, title: '阳光下的骑行者', price: 90, originalPrice: null, images: [`${CLOUD_BASE}/阳光下的骑行者1.jpg`, `${CLOUD_BASE}/阳光下的骑行者2.jpg`, `${CLOUD_BASE}/阳光下的骑行者3.jpg`], category: 8, detId: null, tags: ['少女', '彩铅', '复古'], creatorId: 2, description: '用彩铅描绘夕阳下骑车的少年，带着一丝复古的诗意与自由感。', stock: 1, views: 0, favorites: 0, sales: 0, createdAt: '2026-03-10' },
+  { id: 4, title: '海边的影子', price: 88, originalPrice: null, images: [`${CLOUD_BASE}/海边的影子.jpg`], category: 8, detId: null, tags: ['剪影', '暖色调', '风景'], creatorId: 2, description: '丘陵、大树、海滩、小屋，一副带着暖色调的剪影世界。', stock: 1, views: 0, favorites: 0, sales: 0, createdAt: '2026-03-12' },
+  { id: 5, title: '夏日午后', price: 86, originalPrice: null, images: [`${CLOUD_BASE}/夏日午后.jpg`], category: 2, detId: 203, tags: ['铅笔', '生活', '风景'], creatorId: 2, description: '阳台上晒的衣服、脚踏车、小草地，用黑白铅笔记录下平凡生活中的诗意。', stock: 1, views: 0, favorites: 0, sales: 0, createdAt: '2026-03-16' },
   { id: 6, title: '大理手绘图册', price: 95, originalPrice: null, images: [`${CLOUD_BASE}/大理手绘图册1.jpg`, `${CLOUD_BASE}/大理手绘图册2.jpg`, `${CLOUD_BASE}/大理手绘图册3.jpg`, `${CLOUD_BASE}/大理手绘图册4.jpg`], category: 3, detId: null, tags: ['旅行', '插画', '大理'], creatorId: 3, description: '以原创插画的形式，记录大理的苍山、湖泊和古城风貌。', stock: 15, views: 0, favorites: 0, sales: 0, createdAt: '2026-03-01' },
   { id: 7, title: '仿真拉面', price: 92, originalPrice: null, images: [`${CLOUD_BASE}/仿真拉面.jpg`], category: 4, detId: null, tags: ['仿真', '拉面', '日式'], creatorId: 4, description: '精心制作的仿真拉面模型，连海苔、叉烧、蛋的细节都栩栩如生。', stock: 3, views: 0, favorites: 0, sales: 0, createdAt: '2026-03-05' },
   { id: 8, title: '仿真蜜雪冰', price: 90, originalPrice: null, images: [`${CLOUD_BASE}/仿真蜜雪冰.jpg`], category: 4, detId: null, tags: ['仿真', '甜食', '日式'], creatorId: 4, description: '还原经典日式甜食蜜雪冰，透明感、冰沙质感都处理得非常细腻。', stock: 2, views: 0, favorites: 0, sales: 0, createdAt: '2026-03-08' },
@@ -46,9 +46,9 @@ const products = [
 ]
 
 const banners = [
-  { id: 1, title: '菓然手作', subtitle: '发现生活中的美好' },
-  { id: 2, title: '原创作品', subtitle: '每一件都独一无二' },
-  { id: 3, title: '温暖手作', subtitle: '用心感受每一份创意' }
+  { id: 1, title: '菓然手作', subtitle: '发现生活中的美好', image: '', background: 'linear-gradient(135deg, #E8D5BC 0%, #D5C4A8 100%)', linkType: '纯展示', linkValue: '', enabled: true, sortOrder: 1 },
+  { id: 2, title: '原创作品', subtitle: '每一件都独一无二', image: '', background: 'linear-gradient(135deg, #D5E8D4 0%, #B8D4B6 100%)', linkType: '纯展示', linkValue: '', enabled: true, sortOrder: 2 },
+  { id: 3, title: '温暖手作', subtitle: '用心感受每一份创意', image: '', background: 'linear-gradient(135deg, #E8D4E5 0%, #D4B8D0 100%)', linkType: '纯展示', linkValue: '', enabled: true, sortOrder: 3 }
 ]
 
 const comments = {}
