@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.hbuilderx/
+unpackage/
+.DS_Store
+*.local
+.env.local
+mp-weixin/
