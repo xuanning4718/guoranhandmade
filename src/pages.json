@@ -1,0 +1,99 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "菓然手作",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/category/category",
+      "style": {
+        "navigationBarTitleText": "手作"
+      }
+    },
+    {
+      "path": "pages/cart/cart",
+      "style": {
+        "navigationBarTitleText": "意愿"
+      }
+    },
+    {
+      "path": "pages/user/user",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/product/product",
+      "style": {
+        "navigationBarTitleText": "作品详情"
+      }
+    },
+    {
+      "path": "pages/creator/creator",
+      "style": {
+        "navigationBarTitleText": "创作者"
+      }
+    },
+    {
+      "path": "pages/creator-list/creator-list",
+      "style": {
+        "navigationBarTitleText": "创作者列表",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/search/search",
+      "style": {
+        "navigationBarTitleText": "搜索",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/address/address",
+      "style": {
+        "navigationBarTitleText": "地址管理"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "菓然手作",
+    "navigationBarBackgroundColor": "#FAF7F2",
+    "backgroundColor": "#FAF7F2"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#FF7F50",
+    "borderStyle": "white",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/images/tab-home.png",
+        "selectedIconPath": "static/images/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/category/category",
+        "text": "手作",
+        "iconPath": "static/images/tab-category.png",
+        "selectedIconPath": "static/images/tab-category-active.png"
+      },
+      {
+        "pagePath": "pages/cart/cart",
+        "text": "意愿",
+        "iconPath": "static/images/tab-cart.png",
+        "selectedIconPath": "static/images/tab-cart-active.png"
+      },
+      {
+        "pagePath": "pages/user/user",
+        "text": "我的",
+        "iconPath": "static/images/tab-user.png",
+        "selectedIconPath": "static/images/tab-user-active.png"
+      }
+    ]
+  }
+}
