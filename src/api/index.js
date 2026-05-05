@@ -10,7 +10,8 @@ import {
   likeComment as larkLikeComment,
   updateProductStats as larkUpdateProductStats,
   getBanners as larkGetBanners,
-  getCommentEnabled as larkGetCommentEnabled
+  getCommentEnabled as larkGetCommentEnabled,
+  getHotKeywords as larkGetHotKeywords
 } from './lark.js'
 import { mapProduct, mapCategory, mapCategoryDetail, mapCreator, mapComment } from '../utils/larkMapper.js'
 import { convertCloudImages } from '../utils/cloudImage.js'
@@ -307,9 +308,9 @@ export async function updateProductStats(productId, stats) {
   }
 }
 
-export async function getHotKeywords() {
+export async function getHotKeywords(forceRefresh = false) {
   try {
-    const keywords = await larkGetHotKeywords()
+    const keywords = await larkGetHotKeywords(forceRefresh)
     return { code: 0, data: keywords }
   } catch {
     return { code: 0, data: ['冰箱贴', '旅行图册', '手抄报', '鹅卵石'] }

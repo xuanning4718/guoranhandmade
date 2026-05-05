@@ -170,9 +170,20 @@
           </view>
           <text class="action-text" :class="{ 'text-active': wishlistCount > 0 }">意愿</text>
         </view>
+        <view class="action-item" @click="showSharePoster = true">
+          <image class="action-icon-img" src="/static/images/icon-share.png" mode="aspectFit" />
+          <text class="action-text">分享</text>
+        </view>
         <button class="action-btn" @click="addToWishlist">加入意愿</button>
         <button class="action-btn" @click="contactCreator">立即联系</button>
       </view>
+
+    <SharePoster
+      :visible="showSharePoster"
+      :product="product"
+      :creator="creator"
+      @close="showSharePoster = false"
+    />
 
     <!-- Comment modal -->
     <view v-if="showComment" class="form-mask" @tap="closeComment">
@@ -237,12 +248,14 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import { useWishlistStore } from '../../stores/cart.js'
 import { useFavoriteStore } from '../../stores/favorite.js'
 import { getProductById, getCreators, getComments, addComment, likeComment as likeCommentApi, getCommentEnabled } from '../../api/index.js'
 import { getUserInfo, isProfileComplete, updateProfile, uploadAvatarToCloud } from '../../services/auth.js'
 import { mockData } from '../../api/mockData.js'
 import { formatRelativeTime } from '../../utils/formatTime.js'
+import SharePoster from '../../components/SharePoster.vue'
 
 const wishlistStore = useWishlistStore()
 const favoriteStore = useFavoriteStore()
@@ -254,6 +267,7 @@ const currentImage = ref(0)
 const imgFailed = ref({})
 const comments = ref([])
 const showComment = ref(false)
+const showSharePoster = ref(false)
 const commentText = ref('')
 const replyingTo = ref(null)
 const replyingUserName = ref('')
@@ -275,6 +289,21 @@ const replyText = ref('')
 const commentEnabled = ref(true)
 
 const placeholderColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
+
+onShareAppMessage(() => {
+  return {
+    title: product.value?.title || '菓然手作',
+    path: `/pages/product/product?id=${productId.value}`,
+    imageUrl: product.value?.images?.[0] || '/static/images/guoran.jpg'
+  }
+})
+
+onShareTimeline(() => {
+  return {
+    title: product.value?.title || '菓然手作',
+    imageUrl: product.value?.images?.[0] || '/static/images/guoran.jpg'
+  }
+})
 
 const rootComments = computed(() => {
   const pid = (c) => {
@@ -723,7 +752,6 @@ onMounted(async () => {
 
   const commentRes = await getCommentEnabled()
   commentEnabled.value = commentRes.data
-  console.log('[product] commentEnabled set to:', commentEnabled.value, 'from res:', JSON.stringify(commentRes))
 
   loadData()
 })
