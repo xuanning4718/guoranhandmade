@@ -2,7 +2,7 @@
   <view v-if="visible" class="poster-mask" @tap="handleClose">
     <view class="poster-panel" @tap.stop>
       <scroll-view scroll-y class="poster-body">
-        <image v-if="posterImage" class="poster-preview" :src="posterImage" mode="widthFix" />
+        <image v-if="posterImage" class="poster-preview" :src="posterImage" mode="widthFix" @tap="previewPoster" />
         <view v-else class="poster-loading">
           <text>海报生成中...</text>
         </view>
@@ -11,7 +11,7 @@
       <canvas type="2d" :id="canvasId" :canvas-id="canvasId" class="poster-canvas" :style="{ width: canvasWidth + 'px', height: canvasHeight + 'px' }" />
 
       <view class="poster-actions">
-        <button class="action-btn" @tap="saveToAlbum">保存到相册</button>
+        <view class="tip-text">点击海报预览，长按保存</view>
       </view>
     </view>
   </view>
@@ -29,7 +29,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save'])
 
 const posterImage = ref('')
-const canvasId = ref('sharePoster_' + Date.now())
+const canvasId = 'sharePosterCanvas'
 const canvasWidth = 1016
 const canvasHeight = 1440
 
@@ -53,23 +53,12 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath()
 }
 
-async function downloadImage(url) {
-  if (!url) return null
-  if (url.startsWith('/')) return url
-  if (url.startsWith('cloud://')) {
-    return new Promise((resolve) => {
-      wx.cloud.getTempFileURL({
-        fileList: [{ fileID: url }],
-        success: (res) => resolve(res.fileList?.[0]?.tempFileURL || null),
-        fail: () => resolve(null)
-      })
-    })
-  }
+async function downloadRemoteImage(url) {
   return new Promise((resolve) => {
     uni.downloadFile({
       url,
       success: (res) => resolve(res.statusCode === 200 ? res.tempFilePath : null),
-      fail: () => resolve(null)
+      fail: (e) => { console.error('[SharePoster] downloadRemoteImage fail:', e); resolve(null) }
     })
   })
 }
@@ -107,8 +96,8 @@ async function drawPoster() {
   if (!props.product) return
 
   try {
-    await new Promise(r => setTimeout(r, 200))
-    const canvas = await getCanvasNode(canvasId.value)
+    await new Promise(r => setTimeout(r, 100))
+    const canvas = await getCanvasNode(canvasId)
     const ctx = canvas.getContext('2d')
     const dpr = uni.getWindowInfo().pixelRatio
 
@@ -116,14 +105,12 @@ async function drawPoster() {
     canvas.height = canvasHeight * dpr
     ctx.scale(dpr, dpr)
 
-    // Draw base background
-    const baseImgSrc = 'cloud://cloud1-6geuw2dr3aa3bd50.636c-cloud1-6geuw2dr3aa3bd50-1421195402/pic/share_base.png'
-    const baseLocalPath = await downloadImage(baseImgSrc)
+    // Draw base background from local
     const baseImg = canvas.createImage()
     await new Promise((resolve, reject) => {
       baseImg.onload = resolve
       baseImg.onerror = reject
-      baseImg.src = baseLocalPath || ''
+      baseImg.src = '/static/images/share_base.jpg'
     })
     ctx.drawImage(baseImg, 0, 0, canvasWidth, canvasHeight)
 
@@ -131,7 +118,7 @@ async function drawPoster() {
     const imgUrl = props.product.images?.[0]
     if (!imgUrl) return
 
-    const localPath = await downloadImage(imgUrl)
+    const localPath = await downloadRemoteImage(imgUrl)
     if (!localPath) return
 
     const imgInfo = await new Promise((resolve, reject) => {
@@ -231,26 +218,15 @@ async function drawPoster() {
     })
   } catch (err) {
     console.error('[SharePoster] drawPoster failed:', err)
+    uni.showToast({ title: '海报生成失败', icon: 'none', duration: 2000 })
+    posterImage.value = ''
   }
 }
 
-async function saveToAlbum() {
-  if (!posterImage.value) {
-    uni.showToast({ title: '海报生成中...', icon: 'none' })
-    return
-  }
-  const hasPerm = await new Promise((r) => {
-    uni.authorize({ scope: 'scope.writePhotosAlbum', success: () => r(true), fail: () => r(false) })
-  })
-  if (!hasPerm) {
-    uni.showModal({ title: '需要相册权限', content: '请在设置中开启', confirmText: '去设置', success: (res) => { if (res.confirm) uni.openSetting() } })
-    return
-  }
-  uni.showLoading({ title: '保存中...' })
-  uni.saveImageToPhotosAlbum({
-    filePath: posterImage.value,
-    success: () => { uni.hideLoading(); uni.showToast({ title: '已保存', icon: 'success' }); emit('save') },
-    fail: () => { uni.hideLoading(); uni.showToast({ title: '保存失败', icon: 'none' }) }
+function previewPoster() {
+  uni.previewImage({
+    urls: [posterImage.value],
+    current: posterImage.value
   })
 }
 
@@ -258,7 +234,7 @@ watch(() => props.visible, async (val) => {
   if (val && props.product) {
     posterImage.value = ''
     await nextTick()
-    setTimeout(drawPoster, 400)
+    setTimeout(drawPoster, 100)
   }
 })
 </script>
@@ -277,11 +253,6 @@ watch(() => props.visible, async (val) => {
   height: 600rpx; background: #faf7f2; color: #999; font-size: 28rpx;
 }
 .poster-canvas { position: fixed; left: -9999px; top: -9999px; opacity: 0; pointer-events: none; }
-.poster-actions { padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom)); background: #fff; border-radius: 32rpx 32rpx 0 0; }
-.action-btn {
-  width: 100%; height: 80rpx; line-height: 80rpx; border-radius: 40rpx;
-  font-size: 28rpx; font-weight: 600; text-align: center;
-  background: #4a6741; color: #fff; border: none; margin: 0; padding: 0;
-}
-.action-btn::after { border: none; }
+.poster-actions { padding: 32rpx; background: #fff; text-align: center; }
+.tip-text { font-size: 24rpx; color: #999; }
 </style>
