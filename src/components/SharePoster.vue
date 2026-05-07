@@ -224,6 +224,7 @@ async function drawPoster() {
 }
 
 function previewPoster() {
+  emit('close')
   uni.previewImage({
     urls: [posterImage.value],
     current: posterImage.value
