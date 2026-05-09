@@ -67,9 +67,22 @@
         <view class="product-grid">
           <view class="product-column">
             <ProductCard
-              v-for="product in worksLeft"
+              v-for="product in productsLeft"
               :key="product.id"
               :product="product"
+              :swipeList="products"
+              :swipeIndex="products.indexOf(product)"
+              sourcePage="creator"
+            />
+          </view>
+          <view class="product-column">
+            <ProductCard
+              v-for="product in productsRight"
+              :key="product.id"
+              :product="product"
+              :swipeList="products"
+              :swipeIndex="products.indexOf(product)"
+              sourcePage="creator"
             />
           </view>
           <view class="product-column">

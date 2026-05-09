@@ -25,11 +25,26 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { mockData } from '../api/mockData.js'
+import { useSwipeContextStore } from '../stores/swipeContext.js'
+
+const swipeContext = useSwipeContextStore()
 
 const props = defineProps({
   product: {
     type: Object,
     required: true
+  },
+  swipeList: {
+    type: Array,
+    default: null
+  },
+  swipeIndex: {
+    type: Number,
+    default: -1
+  },
+  sourcePage: {
+    type: String,
+    default: ''
   }
 })
 
@@ -60,8 +75,18 @@ const categoryEmoji = computed(() => category.value?.emoji || '作')
 
 function handleClick() {
   emit('click', props.product)
+
+  const list = props.swipeList
+  const index = props.swipeIndex >= 0 ? props.swipeIndex : (list ? list.findIndex(p => p.id === props.product.id) : -1)
+
+  if (list && list.length > 0 && index >= 0) {
+    swipeContext.enterSwipeMode(list, index, props.sourcePage || 'list')
+  } else {
+    swipeContext.enterSwipeMode([props.product], 0, 'single')
+  }
+
   uni.navigateTo({
-    url: `/pages/product/product?id=${props.product.id}`
+    url: `/pages/immersive/immersive?id=${props.product.id}`
   })
 }
 </script>

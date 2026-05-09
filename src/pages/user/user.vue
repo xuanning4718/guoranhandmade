@@ -38,6 +38,9 @@
           v-for="product in favoriteProducts"
           :key="product.id"
           :product="product"
+          :swipeList="favoriteProducts"
+          :swipeIndex="favoriteProducts.indexOf(product)"
+          sourcePage="user-favorites"
         />
       </view>
       <view v-else class="empty-favorites">

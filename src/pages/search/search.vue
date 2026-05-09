@@ -68,6 +68,9 @@
             v-for="product in searchResultsLeft"
             :key="product.id"
             :product="product"
+            :swipeList="searchResults"
+            :swipeIndex="searchResults.indexOf(product)"
+            sourcePage="search"
           />
         </view>
         <view class="product-column">
@@ -75,6 +78,9 @@
             v-for="product in searchResultsRight"
             :key="product.id"
             :product="product"
+            :swipeList="searchResults"
+            :swipeIndex="searchResults.indexOf(product)"
+            sourcePage="search"
           />
         </view>
       </view>

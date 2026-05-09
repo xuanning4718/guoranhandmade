@@ -94,6 +94,9 @@
                   v-for="product in getProductsByDetIdSplit(sub.detId, 0)"
                   :key="product.id"
                   :product="product"
+                  :swipeList="products"
+                  :swipeIndex="products.indexOf(product)"
+                  sourcePage="category"
                 />
               </view>
               <view class="sub-product-column">
@@ -101,6 +104,9 @@
                   v-for="product in getProductsByDetIdSplit(sub.detId, 1)"
                   :key="product.id"
                   :product="product"
+                  :swipeList="products"
+                  :swipeIndex="products.indexOf(product)"
+                  sourcePage="category"
                 />
               </view>
             </view>
@@ -114,6 +120,9 @@
                 v-for="product in productsLeft"
                 :key="product.id"
                 :product="product"
+                :swipeList="products"
+                :swipeIndex="products.indexOf(product)"
+                sourcePage="category"
               />
             </view>
             <view class="product-column">
@@ -121,6 +130,9 @@
                 v-for="product in productsRight"
                 :key="product.id"
                 :product="product"
+                :swipeList="products"
+                :swipeIndex="products.indexOf(product)"
+                sourcePage="category"
               />
             </view>
           </view>

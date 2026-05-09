@@ -26,6 +26,13 @@
       }
     },
     {
+      "path": "pages/immersive/immersive",
+      "style": {
+        "navigationBarTitleText": "作品",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/product/product",
       "style": {
         "navigationBarTitleText": "作品详情"

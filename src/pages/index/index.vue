@@ -60,16 +60,22 @@
         <view class="product-grid">
           <view class="product-column">
             <ProductCard
-              v-for="(product, idx) in hotProductsLeft"
+              v-for="product in hotProductsLeft"
               :key="product.id"
               :product="product"
+              :swipeList="hotProducts"
+              :swipeIndex="hotProducts.indexOf(product)"
+              sourcePage="index-hot"
             />
           </view>
           <view class="product-column">
             <ProductCard
-              v-for="(product, idx) in hotProductsRight"
+              v-for="product in hotProductsRight"
               :key="product.id"
               :product="product"
+              :swipeList="hotProducts"
+              :swipeIndex="hotProducts.indexOf(product)"
+              sourcePage="index-hot"
             />
           </view>
         </view>
@@ -96,16 +102,22 @@
         <view class="product-grid">
           <view class="product-column">
             <ProductCard
-              v-for="(product, idx) in newProductsLeft"
+              v-for="product in newProductsLeft"
               :key="product.id"
               :product="product"
+              :swipeList="newProducts"
+              :swipeIndex="newProducts.indexOf(product)"
+              sourcePage="index-new"
             />
           </view>
           <view class="product-column">
             <ProductCard
-              v-for="(product, idx) in newProductsRight"
+              v-for="product in newProductsRight"
               :key="product.id"
               :product="product"
+              :swipeList="newProducts"
+              :swipeIndex="newProducts.indexOf(product)"
+              sourcePage="index-new"
             />
           </view>
         </view>
@@ -125,6 +137,7 @@ import ProductCard from '../../components/ProductCard.vue'
 import CreatorCard from '../../components/CreatorCard.vue'
 import { getBanners, getCategories, getHotProducts, getNewProducts, getCreators } from '../../api/index.js'
 import { clearCache } from '../../utils/cache.js'
+import { useSwipeContextStore } from '../../stores/swipeContext.js'
 
 const statusBarHeight = ref(0)
 const headerHeight = ref(0)
@@ -133,6 +146,8 @@ const categories = ref([])
 const hotProducts = ref([])
 const newProducts = ref([])
 const creators = ref([])
+
+const swipeContext = useSwipeContextStore()
 
 const topCreators = computed(() =>
   [...creators.value]
@@ -220,7 +235,14 @@ function handleBannerClick(banner) {
       if (banner.linkValue) {
         const id = parseInt(banner.linkValue)
         if (!isNaN(id)) {
-          uni.navigateTo({ url: `/pages/product/product?id=${id}` })
+          const allItems = [...hotProducts.value]
+          const product = allItems.find(p => p.id === id)
+          if (product) {
+            swipeContext.enterSwipeMode(allItems, allItems.indexOf(product), 'banner')
+          } else {
+            swipeContext.enterSwipeMode([product || { id }], 0, 'banner-single')
+          }
+          uni.navigateTo({ url: `/pages/immersive/immersive?id=${id}` })
         }
       }
       break
