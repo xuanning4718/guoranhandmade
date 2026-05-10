@@ -141,6 +141,7 @@ function removeItem(productId) {
 
 .item-title {
   font-size: 24rpx;
+  font-weight: 600;
   color: #333;
   display: -webkit-box;
   -webkit-line-clamp: 2;

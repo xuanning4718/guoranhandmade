@@ -269,23 +269,34 @@ export async function likeComment(commentId) {
 }
 
 export async function updateProductStats(productId, stats) {
-  const products = await getProducts()
-  const target = products.find(r => r.fields?.id === productId || r.fields?.text === productId)
+  const numProductId = parseInt(productId)
 
-  if (!target) return null
+  const products = await getProducts(500, true)
 
-  const record = {
-    fields: {
-      ...target.fields,
-      ...stats
-    }
+  const target = products.find(r => {
+    const fid = parseInt(r.fields?.id)
+    return fid === numProductId
+  })
+
+  if (!target) {
+    console.error('[lark] Product not found in bitable for id:', numProductId)
+    return null
   }
 
-  return request(
+  // Only send the fields that changed (PATCH-like behavior using PUT)
+  const payload = {}
+  for (const [key, value] of Object.entries(stats)) {
+    payload[key] = parseInt(value) || 0
+  }
+
+  const result = await request(
     `/bitable/v1/apps/${LARK_CONFIG.appToken}/tables/${TABLE_IDS.products}/records/${target.record_id}`,
     'PUT',
-    record
+    { fields: payload }
   )
+
+  uni.removeStorageSync('lark_products')
+  return result
 }
 
 export async function getBanners() {

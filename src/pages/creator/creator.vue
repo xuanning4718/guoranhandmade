@@ -67,21 +67,11 @@
         <view class="product-grid">
           <view class="product-column">
             <ProductCard
-              v-for="product in productsLeft"
+              v-for="product in worksLeft"
               :key="product.id"
               :product="product"
-              :swipeList="products"
-              :swipeIndex="products.indexOf(product)"
-              sourcePage="creator"
-            />
-          </view>
-          <view class="product-column">
-            <ProductCard
-              v-for="product in productsRight"
-              :key="product.id"
-              :product="product"
-              :swipeList="products"
-              :swipeIndex="products.indexOf(product)"
+              :swipeList="works"
+              :swipeIndex="works.indexOf(product)"
               sourcePage="creator"
             />
           </view>
@@ -90,6 +80,9 @@
               v-for="product in worksRight"
               :key="product.id"
               :product="product"
+              :swipeList="works"
+              :swipeIndex="works.indexOf(product)"
+              sourcePage="creator"
             />
           </view>
         </view>

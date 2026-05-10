@@ -16,7 +16,9 @@
     <view class="card-content">
       <text class="card-title">{{ product.title }}</text>
       <view class="card-footer">
-        <text class="card-tags">{{ tagText }}</text>
+        <view class="tags-wrap">
+          <text v-for="tag in (product.tags || []).slice(0, 2)" :key="tag" class="tag">{{ tag }}</text>
+        </view>
       </view>
     </view>
   </view>
@@ -49,12 +51,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['click'])
-
-const tagText = computed(() => {
-  const tags = props.product?.tags
-  if (!tags || !Array.isArray(tags)) return ''
-  return tags.slice(0, 2).join(' · ')
-})
 const imageError = ref(false)
 const hasImage = computed(() =>
   props.product.images && props.product.images.length > 0 && !imageError.value
@@ -75,18 +71,26 @@ const categoryEmoji = computed(() => category.value?.emoji || '作')
 
 function handleClick() {
   emit('click', props.product)
+  console.log('[ProductCard] click:', props.product.id, 'sourcePage:', props.sourcePage, 'swipeList len:', props.swipeList?.length, 'swipeIndex:', props.swipeIndex)
 
   const list = props.swipeList
   const index = props.swipeIndex >= 0 ? props.swipeIndex : (list ? list.findIndex(p => p.id === props.product.id) : -1)
+  console.log('[ProductCard] resolved list len:', list?.length, 'index:', index)
 
   if (list && list.length > 0 && index >= 0) {
     swipeContext.enterSwipeMode(list, index, props.sourcePage || 'list')
+    console.log('[ProductCard] entered swipe mode with list')
   } else {
     swipeContext.enterSwipeMode([props.product], 0, 'single')
+    console.log('[ProductCard] entered single mode')
   }
 
+  console.log('[ProductCard] navigating to immersive, id:', props.product.id)
   uni.navigateTo({
-    url: `/pages/immersive/immersive?id=${props.product.id}`
+    url: `/pages/immersive/immersive?id=${props.product.id}`,
+    fail: (err) => {
+      console.error('[ProductCard] navigateTo failed:', err)
+    }
   })
 }
 </script>
@@ -162,7 +166,8 @@ function handleClick() {
 }
 
 .card-title {
-  font-size: 24rpx;
+  font-size: 26rpx;
+  font-weight: 600;
   color: #333;
   line-height: 1.5;
   display: -webkit-box;
@@ -177,8 +182,17 @@ function handleClick() {
   align-items: center;
 }
 
-.card-tags {
+.tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+}
+
+.tag {
   font-size: 22rpx;
-  color: #999;
+  color: #4a6741;
+  background: rgba(74, 103, 65, 0.08);
+  padding: 2rpx 10rpx;
+  border-radius: 16rpx;
 }
 </style>

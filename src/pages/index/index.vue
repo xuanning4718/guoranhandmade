@@ -64,7 +64,7 @@
               :key="product.id"
               :product="product"
               :swipeList="hotProducts"
-              :swipeIndex="hotProducts.indexOf(product)"
+              :swipeIndex="getHotSwipeIndex(product)"
               sourcePage="index-hot"
             />
           </view>
@@ -74,7 +74,7 @@
               :key="product.id"
               :product="product"
               :swipeList="hotProducts"
-              :swipeIndex="hotProducts.indexOf(product)"
+              :swipeIndex="getHotSwipeIndex(product)"
               sourcePage="index-hot"
             />
           </view>
@@ -106,7 +106,7 @@
               :key="product.id"
               :product="product"
               :swipeList="newProducts"
-              :swipeIndex="newProducts.indexOf(product)"
+              :swipeIndex="getNewSwipeIndex(product)"
               sourcePage="index-new"
             />
           </view>
@@ -116,7 +116,7 @@
               :key="product.id"
               :product="product"
               :swipeList="newProducts"
-              :swipeIndex="newProducts.indexOf(product)"
+              :swipeIndex="getNewSwipeIndex(product)"
               sourcePage="index-new"
             />
           </view>
@@ -181,6 +181,14 @@ const newProductsLeft = computed(() =>
 const newProductsRight = computed(() =>
   newProducts.value.slice(0, 6).filter((_, i) => i % 2 === 1)
 )
+
+function getHotSwipeIndex(product) {
+  return hotProducts.value.findIndex(p => p.id === product.id)
+}
+
+function getNewSwipeIndex(product) {
+  return newProducts.value.findIndex(p => p.id === product.id)
+}
 
 async function onRefresh() {
   clearCache('lark_products')
@@ -430,14 +438,9 @@ onShow(async () => {
   margin-bottom: 8rpx;
 }
 
-.category-icon-text {
-  font-size: 32rpx;
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: 500;
-}
-
 .category-name {
-  font-size: 22rpx;
+  font-size: 24rpx;
+  font-weight: 600;
   color: #666;
 }
 

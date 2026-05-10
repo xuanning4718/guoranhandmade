@@ -1,6 +1,19 @@
 <template>
-  <view v-if="product" class="immersive-page" :style="{ paddingTop: statusBarHeight + 'px' }">
-    <view class="swiper-container" :style="{ height: swiperHeight + 'px' }">
+  <view v-if="productList.length > 0" class="immersive-page" :style="{ paddingTop: statusBarHeight + 'px' }">
+    <view class="top-bar">
+      <view class="top-left">
+        <view class="back-btn" @click.stop="goBack">
+          <text class="back-icon">‹</text>
+        </view>
+        <view class="creator-bar" @click.stop="goCreator(currentProduct)">
+          <image class="creator-avatar-img" src="/static/images/guoran.jpg" mode="aspectFill" />
+          <text class="creator-name">{{ currentName }}</text>
+          <view v-if="currentLevel" :class="levelClass(currentLevel)">{{ currentLevel }}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="main-area" :style="{ height: mainHeight + 'px' }">
       <swiper
         class="vertical-swiper"
         vertical
@@ -24,7 +37,7 @@
                 <image
                   class="product-image"
                   :src="img"
-                  mode="aspectFill"
+                  mode="aspectFit"
                   @click="previewImage(getImageList(item), i)"
                 />
               </swiper-item>
@@ -33,57 +46,67 @@
             <view v-if="getImageList(item).length > 1" class="image-counter">
               <text>{{ (imageCurrentIndex[idx] || 0) + 1 }}/{{ getImageList(item).length }}</text>
             </view>
-
-            <view class="product-mask" :style="{ background: getMaskGradient() }" />
-
-            <view class="bottom-info">
-              <view class="creator-bar" @click.stop="goCreator(item)">
-                <view class="creator-avatar" :style="{ backgroundColor: getCreatorAvatarColor(item?.creatorId || 0) }">
-                  <text>{{ getCreatorName(item)?.charAt(0) || '?' }}</text>
-                </view>
-                <text class="creator-name">{{ getCreatorName(item) }}</text>
-                <view v-if="getCreatorLevel(item)" class="creator-level" :class="'level-' + getCreatorLevel(item)">{{ getCreatorLevel(item) }}</view>
-              </view>
-              <text class="product-title">{{ item.title }}</text>
-              <view class="tags-wrap" v-if="item.tags && item.tags.length">
-                <text v-for="tag in item.tags.slice(0, 3)" :key="tag" class="tag">{{ tag }}</text>
-              </view>
-              <text v-if="item.description" class="product-desc">{{ truncate(item.description, 80) }}</text>
-            </view>
-
-            <view class="action-bar">
-              <view class="action-item" @click.stop="toggleLike(item)">
-                <text class="action-icon" :class="{ liked: itemLiked(item.id) }">{{ itemLiked(item.id) ? '♥' : '♡' }}</text>
-                <text class="action-count">{{ item.likes || 0 }}</text>
-              </view>
-              <view class="action-item" @click.stop="toggleFavorite(item)">
-                <text class="action-icon" :class="{ liked: favoriteStore.isProductFavorited(item.id) }">{{ favoriteStore.isProductFavorited(item.id) ? '★' : '☆' }}</text>
-                <text class="action-count">收藏</text>
-              </view>
-              <view class="action-item" @click.stop="showCommentPanel = true">
-                <text class="action-icon">💬</text>
-                <text class="action-count">{{ commentCountMap[item?.id] > 0 ? commentCountMap[item?.id] : '评论' }}</text>
-              </view>
-              <view class="action-item" @click.stop="shareProduct(item)">
-                <text class="action-icon">↗</text>
-                <text class="action-count">分享</text>
-              </view>
-            </view>
-
-            <view class="detail-btn-wrap">
-              <view class="detail-btn" @click.stop="goDetail(item)">
-                <text>详情</text>
-              </view>
-            </view>
           </view>
         </swiper-item>
       </swiper>
     </view>
 
+    <view class="bottom-bar" :style="{ paddingBottom: safeBottom + 'px' }">
+      <view class="bottom-left">
+        <view class="title-row">
+          <text class="product-title">{{ currentProduct.title || '' }}</text>
+          <view class="title-buttons">
+            <view class="title-detail-btn" @click.stop="goDetail(currentProduct)">
+              <text>详情</text>
+              <view class="detail-arrow" />
+            </view>
+            <view class="title-share-btn" @click.stop="shareProduct(currentProduct)">
+              <image class="share-icon-img" src="/static/images/icon-share.png" mode="aspectFit" />
+            </view>
+          </view>
+        </view>
+        <view class="tags-wrap" v-if="currentProduct.tags && currentProduct.tags.length">
+          <text v-for="tag in currentProduct.tags.slice(0, 3)" :key="tag" class="tag">{{ tag }}</text>
+        </view>
+        <scroll-view v-if="currentProduct.description" scroll-y class="desc-scroll">
+          <text class="product-desc">{{ currentProduct.description }}</text>
+        </scroll-view>
+      </view>
+
+      <view class="bottom-actions">
+        <view class="action-btn-col">
+          <view class="action-item" @click.stop="doToggleLike(currentProduct)">
+            <image class="action-icon-img" :class="{ unliked: !itemLiked(currentProduct.id) }" :src="itemLiked(currentProduct.id) ? '/static/images/good-active.png' : '/static/images/good.png'" mode="aspectFit" />
+            <text class="action-count">{{ currentProduct.likes ?? 0 }}</text>
+          </view>
+          <view class="action-item" @click.stop="doToggleFavorite(currentProduct)">
+            <image class="action-icon-img" :src="favoriteStore.isProductFavorited(currentProduct.id) ? '/static/images/收藏 -已收藏.png' : '/static/images/收藏.png'" mode="aspectFit" />
+            <text class="action-count">{{ currentProduct.favorites ?? 0 }}</text>
+          </view>
+          <view class="action-item" @click.stop="showCommentPanel = true">
+            <image class="action-icon-img comment-icon" src="/static/images/comment.png" mode="aspectFit" />
+            <text class="action-count">{{ commentCountMap[currentProduct?.id] > 0 ? commentCountMap[currentProduct?.id] : 0 }}</text>
+          </view>
+        </view>
+
+        <view class="wishlist-btn" @click.stop="addToWishlist(currentProduct)">
+          <image class="wishlist-btn-icon" src="/static/images/tab-cart.png" mode="aspectFit" />
+          <text class="wishlist-btn-text">加入意愿</text>
+        </view>
+      </view>
+    </view>
+
     <CommentPanel
       :visible="showCommentPanel"
-      :productId="product?.id"
-      @close="showCommentPanel = false"
+      :productId="currentProduct?.id"
+        @close="onCommentClose"
+    />
+
+    <SharePoster
+      :visible="showSharePoster"
+      :product="currentProduct"
+      :creator="currentCreatorData"
+      @close="showSharePoster = false"
     />
   </view>
 
@@ -96,22 +119,27 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import { useSwipeContextStore } from '../../stores/swipeContext.js'
 import { useFavoriteStore } from '../../stores/favorite.js'
-import { getProductById, getCreators, getComments } from '../../api/index.js'
+import { useWishlistStore } from '../../stores/cart.js'
+import { getProductById, getCreators, getComments, updateProductStats } from '../../api/index.js'
 import { convertCloudImages } from '../../utils/cloudImage.js'
 import CommentPanel from '../../components/CommentPanel.vue'
+import SharePoster from '../../components/SharePoster.vue'
 
 const swipeContext = useSwipeContextStore()
 const favoriteStore = useFavoriteStore()
+const wishlistStore = useWishlistStore()
 
 const statusBarHeight = ref(0)
-const swiperHeight = ref(0)
+const mainHeight = ref(0)
+const safeBottom = ref(0)
 const currentIndex = ref(0)
-const product = ref(null)
 const commentCountMap = ref({})
 const showCommentPanel = ref(false)
+const showSharePoster = ref(false)
 const imageAutoplay = ref(true)
 const imageCurrentIndex = ref({})
 const likedProducts = ref({})
@@ -120,39 +148,65 @@ const creatorCache = ref({})
 
 const productList = computed(() => swipeContext.productList)
 
-const isFavoritedIdx = (idx) => {
-  if (idx < 0 || idx >= productList.value.length) return false
-  return favoriteStore.isProductFavorited(productList.value[idx].id)
+const currentProduct = computed(() => {
+  const idx = currentIndex.value
+  if (!productList.value.length || idx < 0 || idx >= productList.value.length) return {}
+  return productCache.value[idx] || productList.value[idx] || {}
+})
+
+const currentName = computed(() => {
+  const p = currentProduct.value
+  if (!p) return '未知创作者'
+  const creatorId = p.creatorId
+  if (creatorCache.value[creatorId]) return creatorCache.value[creatorId].name
+  if (p.creatorName) return p.creatorName
+  return '未知创作者'
+})
+
+const currentLevel = computed(() => {
+  const p = currentProduct.value
+  if (!p) return ''
+  const creatorId = p.creatorId
+  if (creatorCache.value[creatorId]) return creatorCache.value[creatorId].level || ''
+  return ''
+})
+
+const currentCreatorData = computed(() => {
+  const p = currentProduct.value
+  if (!p) return null
+  const creatorId = p.creatorId
+  if (creatorCache.value[creatorId]) return creatorCache.value[creatorId]
+  return {
+    id: creatorId,
+    name: p.creatorName || '未知创作者',
+    wechatQR: null
+  }
+})
+
+function levelClass(level) {
+  const map = { '新手': 'c-level clvl-new', '认证创作者': 'c-level clvl-cert', '热门创作者': 'c-level clvl-hot' }
+  return map[level] || 'c-level clvl-new'
 }
 
 const itemLiked = (id) => !!likedProducts.value[id]
 
+onShareAppMessage(() => {
+  return {
+    title: currentProduct.value?.title || '菓然手作',
+    path: `/pages/immersive/immersive?id=${currentProduct.value?.id}`,
+    imageUrl: currentProduct.value?.images?.[0] || '/static/images/guoran.jpg'
+  }
+})
+
+onShareTimeline(() => {
+  return {
+    title: currentProduct.value?.title || '菓然手作',
+    imageUrl: currentProduct.value?.images?.[0] || '/static/images/guoran.jpg'
+  }
+})
+
 function getImageList(item) {
   return item && item.images ? item.images : []
-}
-
-function getCreatorName(item) {
-  if (!item) return ''
-  const creatorId = item.creatorId
-  if (creatorCache.value[creatorId]) return creatorCache.value[creatorId].name
-  if (item.creatorName) return item.creatorName
-  return '未知创作者'
-}
-
-function getCreatorLevel(item) {
-  if (!item) return ''
-  const creatorId = item.creatorId
-  if (creatorCache.value[creatorId]) return creatorCache.value[creatorId].level || '新手'
-  return '新手'
-}
-
-function getCreatorAvatarColor(creatorId) {
-  const colors = ['#C4A882', '#8FB58A', '#B58F9E', '#8FA8B5', '#B5A88F']
-  return colors[Math.abs(creatorId || 0) % colors.length]
-}
-
-function getMaskGradient() {
-  return 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.15) 40%, transparent 70%)'
 }
 
 function truncate(text, maxLen) {
@@ -164,13 +218,23 @@ function onImageChange(idx, e) {
   imageCurrentIndex.value[idx] = e.detail.current
 }
 
+let switchCooldown = false
+let switchVersion = 0
+
 function onVerticalChange(e) {
-  currentIndex.value = e.detail.current
+  if (!switchCooldown) {
+    currentIndex.value = e.detail.current
+  }
 }
 
 function onVerticalAnimationFinish(e) {
+  if (switchCooldown) return
+  switchCooldown = true
   const idx = e.detail.current
   switchToProduct(idx)
+  setTimeout(() => {
+    switchCooldown = false
+  }, 500)
 }
 
 function stopAutoplay() {
@@ -183,22 +247,93 @@ function resumeAutoplay() {
   }, 5000)
 }
 
+async function doToggleLike(item) {
+  if (!item?.id) return
+  const wasLiked = itemLiked(item.id)
+  likedProducts.value[item.id] = !wasLiked
+  const newLiked = itemLiked(item.id)
+
+  if (productCache.value[currentIndex.value]?.id === item.id) {
+    productCache.value[currentIndex.value] = {
+      ...productCache.value[currentIndex.value],
+      likes: (productCache.value[currentIndex.value].likes ?? 0) + (newLiked ? 1 : -1)
+    }
+    productCache.value = { ...productCache.value }
+  }
+
+  try {
+    await updateProductStats(item.id, { likes: productCache.value[currentIndex.value]?.likes ?? 0 })
+  } catch (e) {
+    console.error('[immersive] sync likes failed:', e)
+    likedProducts.value[item.id] = wasLiked
+    if (productCache.value[currentIndex.value]?.id === item.id) {
+      productCache.value[currentIndex.value] = {
+        ...productCache.value[currentIndex.value],
+        likes: (productCache.value[currentIndex.value].likes ?? 0) + (newLiked ? -1 : 1)
+      }
+      productCache.value = { ...productCache.value }
+    }
+  }
+}
+
+async function doToggleFavorite(item) {
+  if (!item?.id) return
+  const wasFavorited = favoriteStore.isProductFavorited(item.id)
+  const added = favoriteStore.toggleProduct(item.id)
+
+  const currentFavorites = (productCache.value[currentIndex.value]?.favorites ?? 0)
+  if (productCache.value[currentIndex.value]?.id === item.id) {
+    productCache.value[currentIndex.value] = {
+      ...productCache.value[currentIndex.value],
+      favorites: currentFavorites + (added ? 1 : -1)
+    }
+    productCache.value = { ...productCache.value }
+  }
+
+  try {
+    await updateProductStats(item.id, { favorites: productCache.value[currentIndex.value]?.favorites ?? 0 })
+  } catch (e) {
+    console.error('[immersive] sync favorites failed:', e)
+    favoriteStore.toggleProduct(item.id)
+    if (productCache.value[currentIndex.value]?.id === item.id) {
+      productCache.value[currentIndex.value] = {
+        ...productCache.value[currentIndex.value],
+        favorites: (productCache.value[currentIndex.value].favorites ?? 0) + (added ? -1 : 1)
+      }
+      productCache.value = { ...productCache.value }
+    }
+  }
+
+  uni.showToast({ title: added ? '已收藏' : '取消收藏', icon: 'none' })
+}
+
+function goBack() {
+  uni.navigateBack()
+}
+
 async function switchToProduct(idx) {
+  const version = ++switchVersion
   if (idx < 0 || idx >= productList.value.length) return
 
-  if (productCache.value[idx]) {
-    product.value = productCache.value[idx]
-  } else {
+  showCommentPanel.value = false
+  imageCurrentIndex.value = {}
+  imageAutoplay.value = true
+
+  if (!productCache.value[idx]) {
     await loadProduct(idx)
   }
+
+  if (version !== switchVersion) return
+
+  currentIndex.value = idx
   swipeContext.currentIndex = idx
 
-  if (!creatorCache.value[product.value?.creatorId]) {
-    loadCreator(product.value?.creatorId)
+  const p = currentProduct.value
+  if (p?.creatorId && !creatorCache.value[p.creatorId]) {
+    loadCreator(p.creatorId)
   }
-
-  if (!commentCountMap.value[product.value?.id]) {
-    loadComments(product.value?.id)
+  if (p?.id && !commentCountMap.value[p.id]) {
+    loadComments(p.id)
   }
 }
 
@@ -207,18 +342,14 @@ async function loadProduct(idx) {
   if (!item) return
 
   try {
-    if (item.id !== product.value?.id && idx !== currentIndex.value) return
+    const data = { ...item }
 
-    const data = productCache.value[idx] || { ...item }
-    if (data.images && data.images.length > 0) {
+    if (data.images && data.images.length > 0 && !data.images[0].startsWith('http')) {
       data.images = await convertCloudImages(data.images)
     }
 
     productCache.value[idx] = data
-
-    if (productCache.value[idx] === data && idx === currentIndex.value) {
-      product.value = data
-    }
+    productCache.value = { ...productCache.value }
   } catch (err) {
     console.error('[immersive] loadProduct failed:', err)
   }
@@ -239,34 +370,51 @@ async function loadCreator(creatorId) {
 async function loadComments(productId) {
   try {
     const res = await getComments(productId)
-    commentCountMap.value[productId] = (res.data || []).length
+    if (res.data && Array.isArray(res.data)) {
+      commentCountMap.value[productId] = res.data.filter(c => {
+        const pid = typeof c.parentId === 'string' ? parseInt(c.parentId) : c.parentId
+        return !pid || pid === 0
+      }).length
+    }
   } catch (e) {
     console.error('[immersive] loadComments failed:', e)
   }
 }
 
-function toggleFavorite(item) {
-  const added = favoriteStore.toggleProduct(item.id)
-  uni.showToast({ title: added ? '已收藏' : '取消收藏', icon: 'none' })
-}
-
-function toggleLike(item) {
-  likedProducts.value[item.id] = !likedProducts.value[item.id]
-}
-
 function goDetail(item) {
+  if (!item?.id) return
   uni.navigateTo({ url: `/pages/product/product?id=${item.id}` })
 }
 
 function goCreator(item) {
-  if (item.creatorId) {
+  if (item?.creatorId) {
     uni.navigateTo({ url: `/pages/creator/creator?id=${item.creatorId}` })
   }
 }
 
 function shareProduct(item) {
-  uni.showShareMenu({ withShareTicket: true })
-  uni.showToast({ title: '请使用右上角分享', icon: 'none' })
+  if (!item?.id) return
+  showSharePoster.value = true
+}
+
+async function onCommentClose() {
+  showCommentPanel.value = false
+  const pid = currentProduct.value?.id
+  if (pid) {
+    await loadComments(pid)
+  }
+}
+
+function addToWishlist(item) {
+  if (!item) return
+  wishlistStore.addItem({
+    productId: item.id,
+    title: item.title,
+    images: item.images,
+    tags: item.tags,
+    addedAt: new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+  })
+  uni.showToast({ title: '已加入意愿', icon: 'success' })
 }
 
 function previewImage(images, idx) {
@@ -274,24 +422,31 @@ function previewImage(images, idx) {
 }
 
 onMounted(async () => {
+  console.log('[immersive] onMounted')
   const sysInfo = uni.getSystemInfoSync()
   statusBarHeight.value = sysInfo.statusBarHeight || 0
-  swiperHeight.value = sysInfo.windowHeight - statusBarHeight.value
+  safeBottom.value = (sysInfo.safeArea && sysInfo.safeArea.bottom) ? (sysInfo.windowHeight - sysInfo.safeArea.bottom) : 0
+
+  const topBarH = (sysInfo.statusBarHeight || 0) + 48
+  const bottomBarH = 280
+  mainHeight.value = sysInfo.windowHeight - topBarH - bottomBarH - statusBarHeight.value
 
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
   const id = parseInt(currentPage.options?.id || '0')
+  console.log('[immersive] page id:', id, 'context enabled:', swipeContext.enabled, 'list len:', swipeContext.productList.length)
 
   if (!swipeContext.enabled || swipeContext.productList.length === 0) {
+    console.log('[immersive] fallback: direct load via getProductById')
     const res = await getProductById(id)
     if (res.data) {
       res.data.images = await convertCloudImages(res.data.images || [])
       swipeContext.enterSwipeMode([res.data], 0, 'direct')
       productCache.value[0] = res.data
-      product.value = res.data
     }
   } else {
     const idx = swipeContext.productList.findIndex(p => p.id === id)
+    console.log('[immersive] using context, found index:', idx)
     if (idx !== -1) {
       currentIndex.value = idx
     }
@@ -313,11 +468,94 @@ onUnmounted(() => {
   right: 0;
   background: #000;
   z-index: 9999;
+  display: flex;
+  flex-direction: column;
 }
 
-.swiper-container {
+.top-bar {
   position: relative;
-  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 8rpx 12rpx;
+  z-index: 10;
+}
+
+.top-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.back-btn {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.back-icon {
+  font-size: 48rpx;
+  color: #fff;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.creator-bar {
+  display: flex;
+  align-items: center;
+  margin-left: 4rpx;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.creator-avatar-img {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.creator-name {
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 8rpx;
+}
+
+.c-level {
+  font-size: 20rpx;
+  padding: 2rpx 8rpx;
+  border-radius: 10rpx;
+  flex-shrink: 0;
+}
+
+.clvl-new {
+  background: rgba(255,255,255,0.18);
+  color: #ccc;
+}
+
+.clvl-cert {
+  background: rgba(74,143,98,0.25);
+  color: #8fdb9e;
+}
+
+.clvl-hot {
+  background: rgba(232,164,74,0.25);
+  color: #ffc97a;
+}
+
+.main-area {
+  flex: 1;
+  min-height: 0;
+  position: relative;
 }
 
 .vertical-swiper {
@@ -354,85 +592,36 @@ onUnmounted(() => {
 
 .image-counter {
   position: absolute;
-  bottom: 260rpx;
-  right: 32rpx;
-  background: rgba(0,0,0,0.5);
-  padding: 8rpx 20rpx;
-  border-radius: 24rpx;
+  bottom: 24rpx;
+  right: 24rpx;
+  background: rgba(0,0,0,0.6);
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
   z-index: 10;
 }
 
 .image-counter text {
   color: #fff;
-  font-size: 22rpx;
+  font-size: 20rpx;
 }
 
-.product-mask {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 500rpx;
-  pointer-events: none;
+.bottom-bar {
+  background: #000;
+  padding: 16rpx 24rpx;
+  position: relative;
   z-index: 10;
 }
 
-.bottom-info {
-  position: absolute;
-  left: 32rpx;
-  right: 160rpx;
-  bottom: 200rpx;
-  z-index: 11;
+.bottom-left {
+  margin-bottom: 4rpx;
+  padding-right: 24rpx;
 }
 
-.creator-bar {
+.title-row {
   display: flex;
   align-items: center;
-  margin-bottom: 16rpx;
-}
-
-.creator-avatar {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16rpx;
-}
-
-.creator-avatar text {
-  color: #fff;
-  font-size: 24rpx;
-  font-weight: 600;
-}
-
-.creator-name {
-  color: #fff;
-  font-size: 28rpx;
-  font-weight: 600;
-  margin-right: 12rpx;
-}
-
-.creator-level {
-  font-size: 20rpx;
-  padding: 2rpx 10rpx;
-  border-radius: 12rpx;
-}
-
-.level-新手 {
-  background: rgba(255,255,255,0.2);
-  color: #ccc;
-}
-
-.level-认证创作者 {
-  background: rgba(74,143,98,0.3);
-  color: #8fdb9e;
-}
-
-.level-热门创作者 {
-  background: rgba(232,164,74,0.3);
-  color: #ffc97a;
+  justify-content: space-between;
+  margin-bottom: 2rpx;
 }
 
 .product-title {
@@ -440,41 +629,101 @@ onUnmounted(() => {
   font-size: 30rpx;
   font-weight: 600;
   line-height: 1.5;
-  margin-bottom: 16rpx;
-  display: block;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 16rpx;
+}
+
+.title-buttons {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8rpx;
+  padding-right: 4rpx;
+}
+
+.title-share-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56rpx;
+  height: 56rpx;
+}
+
+.share-icon-img {
+  width: 42rpx;
+  height: 42rpx;
+}
+
+.title-detail-btn {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: rgba(232,164,74,0.18);
+  padding: 8rpx 20rpx 8rpx 28rpx;
+  border-radius: 20rpx;
+}
+
+.detail-arrow {
+  width: 16rpx;
+  height: 16rpx;
+  border-top: 4rpx solid #e8a44a;
+  border-right: 4rpx solid #e8a44a;
+  transform: rotate(45deg);
+  margin-left: 12rpx;
+  margin-right: 4rpx;
+}
+
+.title-detail-btn:active {
+  background: rgba(232,164,74,0.3);
+}
+
+.title-detail-btn text {
+  color: #e8a44a;
+  font-size: 32rpx;
+  font-weight: 600;
 }
 
 .tags-wrap {
   display: flex;
   flex-wrap: wrap;
-  gap: 12rpx;
-  margin-bottom: 12rpx;
+  gap: 10rpx;
+  margin-bottom: 2rpx;
 }
 
 .tag {
   font-size: 22rpx;
   color: #fff;
-  background: rgba(255,255,255,0.2);
-  padding: 4rpx 14rpx;
-  border-radius: 20rpx;
+  background: rgba(255,255,255,0.15);
+  padding: 4rpx 12rpx;
+  border-radius: 16rpx;
+}
+
+.desc-scroll {
+  max-height: 124rpx;
 }
 
 .product-desc {
   font-size: 24rpx;
-  color: rgba(255,255,255,0.7);
-  line-height: 1.6;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.5;
   display: block;
 }
 
-.action-bar {
-  position: absolute;
-  right: 24rpx;
-  bottom: 240rpx;
-  z-index: 11;
+.bottom-actions {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 32rpx;
+  gap: 8rpx;
+  margin-left: 4rpx;
+}
+
+.action-btn-col {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  justify-content: space-around;
 }
 
 .action-item {
@@ -483,41 +732,52 @@ onUnmounted(() => {
   align-items: center;
 }
 
-.action-icon {
-  font-size: 52rpx;
-  color: #fff;
+.action-icon-img {
+  width: 52rpx;
+  height: 52rpx;
   margin-bottom: 4rpx;
 }
 
-.action-icon.liked {
-  color: #e64340;
+.action-icon-img.unliked {
+  filter: brightness(0) invert(1) opacity(0.85);
+}
+
+.action-icon-img.comment-icon {
+  filter: brightness(0) invert(1);
+}
+
+.wishlist-btn {
+  flex-shrink: 0;
+  width: 38%;
+  background: #4a6741;
+  border-radius: 44rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  margin-left: 8rpx;
+  margin-right: 24rpx;
+}
+
+.wishlist-btn:active {
+  opacity: 0.85;
+}
+
+.wishlist-btn-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
+
+.wishlist-btn-text {
+  font-size: 24rpx;
+  color: #fff;
+  font-weight: 500;
 }
 
 .action-count {
   font-size: 20rpx;
   color: #fff;
-}
-
-.detail-btn-wrap {
-  position: absolute;
-  right: 24rpx;
-  bottom: 140rpx;
-  z-index: 11;
-}
-
-.detail-btn {
-  background: rgba(255,255,255,0.2);
-  padding: 12rpx 28rpx;
-  border-radius: 32rpx;
-}
-
-.detail-btn:active {
-  background: rgba(255,255,255,0.3);
-}
-
-.detail-btn text {
-  color: #fff;
-  font-size: 24rpx;
 }
 
 .immersive-loading {

@@ -94,8 +94,8 @@
                   v-for="product in getProductsByDetIdSplit(sub.detId, 0)"
                   :key="product.id"
                   :product="product"
-                  :swipeList="products"
-                  :swipeIndex="products.indexOf(product)"
+                  :swipeList="displayProducts"
+                  :swipeIndex="getSwipeIndex(product)"
                   sourcePage="category"
                 />
               </view>
@@ -104,8 +104,8 @@
                   v-for="product in getProductsByDetIdSplit(sub.detId, 1)"
                   :key="product.id"
                   :product="product"
-                  :swipeList="products"
-                  :swipeIndex="products.indexOf(product)"
+                  :swipeList="displayProducts"
+                  :swipeIndex="getSwipeIndex(product)"
                   sourcePage="category"
                 />
               </view>
@@ -120,8 +120,8 @@
                 v-for="product in productsLeft"
                 :key="product.id"
                 :product="product"
-                :swipeList="products"
-                :swipeIndex="products.indexOf(product)"
+                :swipeList="displayProducts"
+                :swipeIndex="getSwipeIndex(product)"
                 sourcePage="category"
               />
             </view>
@@ -130,8 +130,8 @@
                 v-for="product in productsRight"
                 :key="product.id"
                 :product="product"
-                :swipeList="products"
-                :swipeIndex="products.indexOf(product)"
+                :swipeList="displayProducts"
+                :swipeIndex="getSwipeIndex(product)"
                 sourcePage="category"
               />
             </view>
@@ -184,6 +184,15 @@ const productsLeft = computed(() =>
 const productsRight = computed(() =>
   products.value.filter((_, i) => i % 2 === 1)
 )
+
+const displayProducts = computed(() => {
+  if (subCategories.value.length === 0) return products.value
+  const result = []
+  for (const sub of subCategories.value) {
+    result.push(...getProductsByDetId(sub.detId))
+  }
+  return result
+})
 
 async function loadSubCategories() {
   if (!selectedCategory.value) {
@@ -300,6 +309,10 @@ function getProductsByDetId(detId) {
     const pDetId = typeof p.detId === 'string' ? parseInt(p.detId) : p.detId
     return pDetId === numDetId
   })
+}
+
+function getSwipeIndex(product) {
+  return displayProducts.value.findIndex(p => p.id === product.id)
 }
 
 function getProductsByDetIdSplit(detId, col) {

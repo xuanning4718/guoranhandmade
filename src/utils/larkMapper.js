@@ -92,6 +92,7 @@ export function mapProduct(record) {
     creatorId: parseInt(getField(record, 'creator_id', 'creatorId') || '0'),
     price: parseFloat(getField(record, 'price', '价格') || '0'),
     views: parseInt(getField(record, 'views', '浏览数') || '0'),
+    likes: parseInt(getField(record, 'likes', '点赞数', '点赞') || '0'),
     favorites: parseInt(getField(record, 'favorites', '收藏数') || '0'),
     sortOrder: parseInt(getField(record, 'sort_order', 'sortOrder') || '0'),
     createdAt: getField(record, 'created_at', 'createdAt') || ''

@@ -303,8 +303,9 @@ export async function likeComment(commentId) {
 export async function updateProductStats(productId, stats) {
   try {
     return await larkUpdateProductStats(productId, stats)
-  } catch {
-    return { success: true }
+  } catch (e) {
+    console.error('[api] updateProductStats error:', e)
+    throw e
   }
 }
 

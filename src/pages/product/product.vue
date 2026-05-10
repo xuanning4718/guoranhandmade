@@ -1,6 +1,6 @@
 <template>
   <view v-if="product" class="product-page">
-    <scroll-view scroll-y class="scroll-content">
+    <scroll-view scroll-y class="scroll-content" @click="closeCommentInput">
       <view class="image-section">
         <swiper
           class="image-swiper"
@@ -78,8 +78,7 @@
 
       <view v-if="commentEnabled" class="comment-section">
         <view class="section-header">
-          <text class="section-title">评价</text>
-          <text v-if="comments.length > 0" class="comment-count">({{ comments.length }})</text>
+          <text class="section-title">评论 {{ comments.length }}</text>
         </view>
 
         <view v-if="comments.length > 0" class="comment-list">
@@ -92,34 +91,21 @@
               <view class="comment-content-wrap">
                 <view class="comment-header">
                   <text class="comment-user">{{ rootComment.userName }}</text>
-                  <view class="like-trigger" @click="toggleLike(rootComment.id)">
-                    <text class="like-count">{{ rootComment.likes || '' }}</text>
-                    <image class="footer-icon" :src="likedComments[rootComment.id] ? '/static/images/good-active.png' : '/static/images/good.png'" mode="aspectFit" />
-                  </view>
                 </view>
                 <text class="comment-content">{{ rootComment.content }}</text>
                 <view class="comment-footer">
-                  <text class="comment-time">{{ formatCommentTime(rootComment.createdAt) }}</text>
-                  <view class="reply-trigger" @click="openInlineReply(rootComment.id)">
-                    <image class="footer-icon" src="/static/images/comment.png" mode="aspectFit" />
-                    <text class="reply-text">回复</text>
+                  <view class="footer-left">
+                    <text class="comment-time">{{ formatCommentTime(rootComment.createdAt) }}</text>
+                    <view class="reply-trigger" @click="openReply(rootComment)">
+                      <text class="reply-text">回复</text>
+                    </view>
+                  </view>
+                  <view class="like-trigger" @click="toggleLike(rootComment.id)">
+                    <text class="like-count">{{ rootComment.likes || '' }}</text>
+                    <text class="like-icon">{{ likedComments[rootComment.id] ? '♥' : '♡' }}</text>
                   </view>
                 </view>
 
-                <!-- Inline reply input -->
-                <view v-if="replyToId === rootComment.id" class="inline-reply">
-                  <textarea class="reply-textarea" placeholder="写下你的回复..." @input="onReplyInput" :value="replyText" maxlength="200" auto-height />
-                  <view class="reply-actions">
-                    <view class="reply-cancel" @click="cancelReply">
-                      <text>取消</text>
-                    </view>
-                    <view class="reply-submit" @click="submitReply(rootComment.id)">
-                      <text>回复</text>
-                    </view>
-                  </view>
-                </view>
-
-                <!-- Inline reply list -->
                 <view v-if="replies[String(rootComment.id)]?.length > 0" class="reply-section">
                   <view v-for="reply in replies[String(rootComment.id)]" :key="reply.id" class="reply-item">
                     <view class="reply-avatar" :class="{ 'avatar-default': !reply.userAvatar }">
@@ -129,14 +115,14 @@
                     <view class="reply-body-wrap">
                       <view class="reply-header">
                         <text class="reply-user">{{ reply.userName }}</text>
-                        <view class="reply-like-trigger" @click="toggleReplyLike(reply.id)">
-                          <text class="reply-like-count">{{ reply.likes || '' }}</text>
-                          <image class="footer-icon" :src="likedReplies[reply.id] ? '/static/images/good-active.png' : '/static/images/good.png'" mode="aspectFit" />
-                        </view>
                       </view>
                       <text class="reply-content">{{ reply.content }}</text>
                       <view class="reply-footer">
                         <text class="reply-time">{{ formatCommentTime(reply.createdAt) }}</text>
+                        <view class="reply-like-trigger" @click="toggleReplyLike(reply.id)">
+                          <text class="reply-like-count">{{ reply.likes || '' }}</text>
+                          <text class="like-icon">{{ likedReplies[reply.id] ? '♥' : '♡' }}</text>
+                        </view>
                       </view>
                     </view>
                   </view>
@@ -147,35 +133,68 @@
         </view>
 
         <view v-else class="empty-comments">
-          <text class="empty-icon">💬</text>
-          <text class="empty-text">暂无评价</text>
+          <text class="empty-text">快来抢沙发评论</text>
         </view>
-
-        <button class="publish-comment-btn" @click="openComment">发表评价</button>
       </view>
     </scroll-view>
 
-      <view class="action-bar">
-        <view class="action-item" @click="toggleFavorite">
-          <text v-if="isFavorited" class="icon-text active">♥</text>
-          <text v-else class="icon-text">♡</text>
-          <text class="action-text">收藏</text>
+      <view v-if="!showCommentInput" class="action-bar">
+        <view class="comment-trigger" @click="focusCommentInput">
+          <text class="comment-trigger-bar-text">留下你的想法吧</text>
         </view>
-        <view class="action-item" @click="goWishlist">
-          <view class="icon-wrap">
-            <image class="action-icon-img" :class="{ 'icon-active': wishlistCount > 0 }" src="/static/images/tab-cart.png" mode="aspectFit" />
-            <view v-if="wishlistCount > 0" class="badge">
-              <text class="badge-text">{{ wishlistCount }}</text>
+        <view class="action-btn-col">
+          <view class="action-item" @click.stop="doToggleLike">
+            <view class="icon-wrap">
+              <image class="action-icon-img" :class="{ unliked: !isProductLiked }" :src="isProductLiked ? '/static/images/good-active.png' : '/static/images/good.png'" mode="aspectFit" />
+              <view class="badge badge-outline" v-if="likedCount > 0">
+                <text class="badge-text badge-text-dark">{{ likedCount }}</text>
+              </view>
             </view>
           </view>
-          <text class="action-text" :class="{ 'text-active': wishlistCount > 0 }">意愿</text>
+          <view class="action-item" @click.stop="doToggleFavorite">
+            <view class="icon-wrap">
+              <image class="action-icon-img" :src="favoriteStore.isProductFavorited(productId) ? '/static/images/收藏 -已收藏.png' : '/static/images/收藏-black.png'" mode="aspectFit" />
+              <view class="badge badge-outline" v-if="(product?.favorites ?? 0) > 0">
+                <text class="badge-text badge-text-dark">{{ product?.favorites ?? 0 }}</text>
+              </view>
+            </view>
+          </view>
+          <view class="action-item" @click.stop="showSharePoster = true">
+            <view class="icon-wrap">
+              <image class="action-icon-img" src="/static/images/icon-share.png" mode="aspectFit" />
+            </view>
+          </view>
         </view>
-        <view class="action-item" @click="showSharePoster = true">
-          <image class="action-icon-img" src="/static/images/icon-share.png" mode="aspectFit" />
-          <text class="action-text">分享</text>
+        <view class="wishlist-btn-wrap">
+          <button :class="['action-btn', isProductInWishlist ? 'action-btn-wishlisted' : '']" @click.stop="handleWishlist">
+            <text>{{ isProductInWishlist ? '查看意愿' : '加入意愿' }}</text>
+          </button>
         </view>
-        <button class="action-btn" @click="addToWishlist">加入意愿</button>
-        <button class="action-btn" @click="contactCreator">立即联系</button>
+      </view>
+
+      <view v-else class="comment-input-bar" :style="commentBarTransform" @click.stop>
+        <view class="comment-input-wrap">
+          <view class="input-avatar" :class="{ 'avatar-default': !userInfo.avatar }">
+            <image v-if="userInfo.avatar" class="avatar-img" :src="userInfo.avatar" mode="aspectFill" />
+            <text v-else class="avatar-text">{{ userInfo.nickName?.charAt(0) || '用' }}</text>
+          </view>
+          <textarea
+            class="input-field"
+            auto-focus
+            :focus="commentFocus"
+            :placeholder="replyingTo ? '回复 ' + replyingUserName : '发表评论'"
+            v-model="commentText"
+            auto-height
+            :maxlength="-1"
+            :show-confirm-bar="false"
+            :adjust-position="false"
+            @confirm="replyingTo ? submitReplyDirect(replyingTo) : submitCommentDirect()"
+            @blur="onCommentBlur"
+          />
+          <view class="send-btn" @click.stop="replyingTo ? submitReplyDirect(replyingTo) : submitCommentDirect()">
+            <text class="send-btn-text">发送</text>
+          </view>
+        </view>
       </view>
 
     <SharePoster
@@ -184,34 +203,6 @@
       :creator="creator"
       @close="showSharePoster = false"
     />
-
-    <!-- Comment modal -->
-    <view v-if="showComment" class="form-mask" @tap="closeComment">
-      <view class="form-panel" catchtap>
-        <view class="form-header">
-          <text class="form-title">{{ replyingTo ? '回复' : '发表评价' }}</text>
-          <view class="form-close" @click="closeComment">
-            <text>✕</text>
-          </view>
-        </view>
-        <view class="form-body">
-          <view v-if="replyingTo" class="replying-hint">
-            <text>回复 {{ replyingUserName }}</text>
-          </view>
-          <view class="form-group">
-            <textarea
-              class="comment-input"
-              placeholder="说说你对这件作品的感受..."
-              @input="onCommentInput"
-              :value="commentText"
-              maxlength="200"
-            />
-            <text class="char-count">{{ commentText.length }}/200</text>
-          </view>
-          <button class="submit-btn" @click="submitComment">{{ replyingTo ? '回复' : '发布' }}</button>
-        </view>
-      </view>
-    </view>
 
     <view v-if="showProfileSetup" class="form-mask" @click="closeProfileSetup">
       <view class="form-panel" @click.stop>
@@ -239,7 +230,7 @@
               :value="tempNickname"
             />
           </view>
-          <button class="save-btn" @click="saveProfile">保存</button>
+          <button class="save-btn" @click="onSaveProfileComplete">保存</button>
         </view>
       </view>
     </view>
@@ -247,11 +238,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import { useWishlistStore } from '../../stores/cart.js'
 import { useFavoriteStore } from '../../stores/favorite.js'
-import { getProductById, getCreators, getComments, addComment, likeComment as likeCommentApi, getCommentEnabled } from '../../api/index.js'
+import { getProductById, getCreators, getComments, addComment, likeComment as likeCommentApi, getCommentEnabled, updateProductStats } from '../../api/index.js'
 import { getUserInfo, isProfileComplete, updateProfile, uploadAvatarToCloud } from '../../services/auth.js'
 import { mockData } from '../../api/mockData.js'
 import { formatRelativeTime } from '../../utils/formatTime.js'
@@ -266,14 +257,9 @@ const productId = ref(0)
 const currentImage = ref(0)
 const imgFailed = ref({})
 const comments = ref([])
-const showComment = ref(false)
-const showSharePoster = ref(false)
 const commentText = ref('')
 const replyingTo = ref(null)
 const replyingUserName = ref('')
-const commentScore = ref(null)
-const showAllComments = ref(false)
-const expandReplies = ref({})
 const userName = ref('')
 const likedComments = ref({})
 const likedReplies = ref({})
@@ -282,11 +268,20 @@ const showProfileSetup = ref(false)
 const tempAvatar = ref('')
 const tempNickname = ref('')
 const pendingComment = ref(false)
-const pendingReplyToId = ref(null)
-
-const replyToId = ref(null)
-const replyText = ref('')
 const commentEnabled = ref(true)
+const likedProduct = ref(false)
+const showSharePoster = ref(false)
+const showCommentInput = ref(false)
+const commentFocus = ref(false)
+const keyboardHeight = ref(0)
+
+const commentBarTransform = computed(() => {
+  return keyboardHeight.value > 0
+    ? { transform: `translateY(-${keyboardHeight.value}px)` }
+    : {}
+})
+
+const userInfo = computed(() => getUserInfo())
 
 const placeholderColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
 
@@ -329,9 +324,24 @@ const replies = computed(() => {
   return map
 })
 
-const isFavorited = computed(() => favoriteStore.isProductFavorited(productId.value))
-const isInWishlist = computed(() => wishlistStore.isInWishlist(productId.value))
 const wishlistCount = computed(() => wishlistStore.totalCount)
+const isProductLiked = computed(() => likedProduct.value)
+const likedCount = computed(() => product.value?.likes ?? 0)
+const isProductInWishlist = computed(() => wishlistStore.isInWishlist(productId.value))
+
+function closeCommentInput() {
+  if (showCommentInput.value && !commentText.value.trim()) {
+    showCommentInput.value = false
+  }
+}
+
+function handleWishlist() {
+  if (isProductInWishlist.value) {
+    goWishlist()
+  } else {
+    addToWishlist()
+  }
+}
 
 async function toggleLike(commentId) {
   if (likedComments.value[commentId]) return
@@ -459,17 +469,29 @@ function toggleAllComments() {
   showAllComments.value = !showAllComments.value
 }
 
-function openReply(commentId) {
+function focusCommentInput() {
   if (!isProfileComplete()) {
-    pendingComment.value = true
     openProfileSetup()
     return
   }
-  const comment = comments.value.find(c => c.id === commentId)
-  replyingTo.value = commentId
-  replyingUserName.value = comment?.userName || ''
-  showComment.value = true
+  showCommentInput.value = true
+}
+
+function onCommentBlur() {
+  setTimeout(() => {
+    showCommentInput.value = false
+    commentFocus.value = false
+  }, 200)
+}
+
+function openReply(comment) {
+  replyingTo.value = comment.id
+  replyingUserName.value = comment.userName || ''
   commentText.value = ''
+  showCommentInput.value = true
+  nextTick(() => {
+    commentFocus.value = true
+  })
 }
 
 function toggleReplies(commentId) {
@@ -495,16 +517,70 @@ function submitRating() {
   }
 }
 
-function openComment() {
-  if (!isProfileComplete()) {
-    pendingComment.value = true
-    openProfileSetup()
+async function submitCommentDirect() {
+  if (!commentText.value.trim()) {
+    uni.showToast({ title: '请输入评论内容', icon: 'none' })
     return
   }
-  replyingTo.value = null
-  showComment.value = true
-  commentText.value = ''
-  userName.value = getUserInfo().nickName || '匿名用户'
+
+  const info = getUserInfo()
+  const comment = {
+    productId: productId.value,
+    userId: 0,
+    parentId: null,
+    userName: info.nickName || '匿名用户',
+    userAvatar: info.avatar || '',
+    content: commentText.value,
+    createdAt: new Date().toISOString()
+  }
+
+  uni.showLoading({ title: '发布中...' })
+  try {
+    await addComment(comment)
+    commentText.value = ''
+    showCommentInput.value = false
+    await refreshComments()
+    uni.hideLoading()
+    uni.showToast({ title: '发布成功', icon: 'success' })
+  } catch (err) {
+    console.error('[product] submitComment failed:', err)
+    uni.hideLoading()
+    uni.showToast({ title: '发布失败，请重试', icon: 'none' })
+  }
+}
+
+async function submitReplyDirect(parentId) {
+  if (!commentText.value.trim()) {
+    uni.showToast({ title: '请输入回复内容', icon: 'none' })
+    return
+  }
+
+  const info = getUserInfo()
+  const reply = {
+    productId: parseInt(productId.value),
+    userId: 0,
+    parentId: parseInt(parentId),
+    userName: info.nickName || '匿名用户',
+    userAvatar: info.avatar || '',
+    content: commentText.value,
+    createdAt: new Date().toISOString()
+  }
+
+  uni.showLoading({ title: '发布中...' })
+  try {
+    await addComment(reply)
+    commentText.value = ''
+    replyingTo.value = null
+    replyingUserName.value = ''
+    showCommentInput.value = false
+    await refreshComments()
+    uni.hideLoading()
+    uni.showToast({ title: '回复成功', icon: 'success' })
+  } catch (err) {
+    console.error('[product] submitReply failed:', err)
+    uni.hideLoading()
+    uni.showToast({ title: '发布失败，请重试', icon: 'none' })
+  }
 }
 
 function openProfileSetup() {
@@ -527,7 +603,7 @@ function onNicknameInput(e) {
   tempNickname.value = e.detail.value
 }
 
-function saveProfile() {
+function onSaveProfileComplete() {
   if (!tempNickname.value.trim()) {
     uni.showToast({ title: '请输入昵称', icon: 'none' })
     return
@@ -550,19 +626,9 @@ function saveProfile() {
       showProfileSetup.value = false
       uni.showToast({ title: '保存成功', icon: 'success' })
 
-      if (pendingReplyToId.value !== null) {
-        const replyId = pendingReplyToId.value
-        pendingReplyToId.value = null
-        pendingComment.value = false
-        setTimeout(() => {
-          openInlineReply(replyId)
-        }, 500)
-      } else if (pendingComment.value) {
-        pendingComment.value = false
-        setTimeout(() => {
-          openComment()
-        }, 500)
-      }
+      setTimeout(() => {
+        showCommentInput.value = true
+      }, 500)
     })
     .catch(() => {
       uni.hideLoading()
@@ -570,110 +636,11 @@ function saveProfile() {
     })
 }
 
-function onCommentInput(e) {
-  commentText.value = e.detail.value
-}
-
 function onAvatarError(commentId) {
   const idx = comments.value.findIndex(c => c.id === commentId)
   if (idx > -1) {
     comments.value[idx].userAvatar = ''
   }
-}
-
-function openInlineReply(commentId) {
-  if (!isProfileComplete()) {
-    pendingComment.value = true
-    pendingReplyToId.value = commentId
-    openProfileSetup()
-    return
-  }
-  replyToId.value = commentId
-  replyText.value = ''
-}
-
-function onReplyInput(e) {
-  replyText.value = e.detail.value
-}
-
-function cancelReply() {
-  replyToId.value = null
-  replyText.value = ''
-}
-
-async function submitReply(parentId) {
-  if (!replyText.value.trim()) {
-    uni.showToast({ title: '请输入回复内容', icon: 'none' })
-    return
-  }
-
-  const userInfo = getUserInfo()
-  const reply = {
-    productId: parseInt(productId.value),
-    userId: 0,
-    parentId: parseInt(parentId),
-    userName: userInfo.nickName || '匿名用户',
-    userAvatar: userInfo.avatar || '',
-    content: replyText.value,
-    createdAt: new Date().toISOString()
-  }
-
-  try {
-    uni.showLoading({ title: '发布中...' })
-    await addComment(reply)
-    await refreshComments()
-
-    replyToId.value = null
-    replyText.value = ''
-  } catch (err) {
-    console.error('[product] submitReply failed:', err)
-    uni.showToast({ title: '发布失败，请重试', icon: 'none' })
-    return
-  } finally {
-    uni.hideLoading()
-  }
-
-  uni.showToast({ title: '回复成功', icon: 'success' })
-}
-
-function closeComment() {
-  showComment.value = false
-}
-
-async function submitComment() {
-  if (!commentText.value.trim()) {
-    uni.showToast({ title: '请输入评价内容', icon: 'none' })
-    return
-  }
-
-  const userInfo = getUserInfo()
-  const comment = {
-    productId: productId.value,
-    userId: 0,
-    parentId: replyingTo.value,
-    userName: userInfo.nickName || '匿名用户',
-    userAvatar: userInfo.avatar || '',
-    content: commentText.value,
-    createdAt: new Date().toISOString()
-  }
-
-  try {
-    uni.showLoading({ title: '发布中...' })
-    await addComment(comment)
-    await refreshComments()
-  } catch (err) {
-    console.error('[product] addComment failed:', err)
-    uni.showToast({ title: '发布失败，请重试', icon: 'none' })
-    return
-  } finally {
-    uni.hideLoading()
-  }
-
-  commentText.value = ''
-  showComment.value = false
-  replyingTo.value = null
-
-  uni.showToast({ title: '发布成功', icon: 'success' })
 }
 
 async function refreshComments() {
@@ -714,17 +681,57 @@ function addToWishlist() {
   uni.showToast({ title: '已加入意愿', icon: 'success' })
 }
 
-function goWishlist() {
-  uni.switchTab({ url: '/pages/cart/cart' })
+async function doToggleLike() {
+  if (!product.value?.id) return
+  const wasLiked = likedProduct.value
+  likedProduct.value = !wasLiked
+  const newLiked = likedProduct.value
+
+  const prevLikes = product.value.likes ?? 0
+  product.value = {
+    ...product.value,
+    likes: prevLikes + (newLiked ? 1 : -1)
+  }
+
+  try {
+    await updateProductStats(product.value.id, { likes: product.value.likes ?? 0 })
+  } catch (e) {
+    console.error('[product] sync likes failed:', e)
+    likedProduct.value = wasLiked
+    product.value = {
+      ...product.value,
+      likes: prevLikes + (wasLiked ? -1 : 1)
+    }
+  }
 }
 
-function toggleFavorite() {
-  if (!product.value) return
+async function doToggleFavorite() {
+  if (!product.value?.id) return
+  const wasFavorited = favoriteStore.isProductFavorited(product.value.id)
   const added = favoriteStore.toggleProduct(product.value.id)
-  uni.showToast({
-    title: added ? '已收藏' : '已取消收藏',
-    icon: 'none'
-  })
+
+  const prevFavorites = product.value.favorites ?? 0
+  product.value = {
+    ...product.value,
+    favorites: prevFavorites + (added ? 1 : -1)
+  }
+
+  try {
+    await updateProductStats(product.value.id, { favorites: product.value.favorites ?? 0 })
+  } catch (e) {
+    console.error('[product] sync favorites failed:', e)
+    favoriteStore.toggleProduct(product.value.id)
+    product.value = {
+      ...product.value,
+      favorites: prevFavorites + (added ? -1 : 1)
+    }
+  }
+
+  uni.showToast({ title: added ? '已收藏' : '取消收藏', icon: 'none' })
+}
+
+function goWishlist() {
+  uni.switchTab({ url: '/pages/cart/cart' })
 }
 
 function goCreator() {
@@ -745,7 +752,13 @@ function contactCreator() {
   }
 }
 
+function onKeyboardHeightChange(res) {
+  keyboardHeight.value = res.height || 0
+}
+
 onMounted(async () => {
+  uni.onKeyboardHeightChange(onKeyboardHeightChange)
+
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
   productId.value = parseInt(currentPage.options?.id || '0')
@@ -755,17 +768,21 @@ onMounted(async () => {
 
   loadData()
 })
+
+onUnmounted(() => {
+  uni.offKeyboardHeightChange(onKeyboardHeightChange)
+})
 </script>
 
 <style scoped>
 .product-page {
   min-height: 100vh;
   background: #faf7f2;
-  padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
+  padding-bottom: calc(140rpx + env(safe-area-inset-bottom));
 }
 
 .scroll-content {
-  height: calc(100vh - 160rpx - env(safe-area-inset-bottom));
+  height: calc(100vh - 140rpx - env(safe-area-inset-bottom));
 }
 
 .image-section {
@@ -825,7 +842,7 @@ onMounted(async () => {
 }
 
 .product-title {
-  font-size: 32rpx;
+  font-size: 34rpx;
   font-weight: 600;
   color: #333;
   line-height: 1.5;
@@ -840,7 +857,7 @@ onMounted(async () => {
 }
 
 .tag {
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: #4a6741;
   background: rgba(74, 103, 65, 0.08);
   padding: 4rpx 16rpx;
@@ -896,14 +913,14 @@ onMounted(async () => {
 }
 
 .creator-name {
-  font-size: 28rpx;
+  font-size: 30rpx;
   font-weight: 600;
   color: #333;
   margin-right: 16rpx;
 }
 
 .level-tag {
-  font-size: 20rpx;
+  font-size: 22rpx;
   padding: 2rpx 10rpx;
   border-radius: 12rpx;
 }
@@ -924,7 +941,7 @@ onMounted(async () => {
 }
 
 .creator-bio {
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: #666;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -940,11 +957,11 @@ onMounted(async () => {
 .contact-btn {
   display: flex;
   align-items: center;
-  gap: 4rpx;
-  padding: 8rpx 16rpx;
+  gap: 8rpx;
+  padding: 12rpx 24rpx;
   background: #faf7f2;
-  border-radius: 20rpx;
-  font-size: 22rpx;
+  border-radius: 30rpx;
+  font-size: 26rpx;
   color: #4a6741;
 }
 
@@ -953,12 +970,12 @@ onMounted(async () => {
 }
 
 .contact-icon-img {
-  width: 28rpx;
-  height: 28rpx;
+  width: 42rpx;
+  height: 42rpx;
 }
 
 .contact-text {
-  font-size: 22rpx;
+  font-size: 26rpx;
   color: #4a6741;
 }
 
@@ -977,7 +994,7 @@ onMounted(async () => {
 }
 
 .product-description {
-  font-size: 24rpx;
+  font-size: 26rpx;
   color: #666;
   line-height: 1.8;
   display: block;
@@ -993,13 +1010,13 @@ onMounted(async () => {
 }
 
 .time-label {
-  font-size: 24rpx;
+  font-size: 26rpx;
   color: #999;
   margin-right: 0;
 }
 
 .time-value {
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: #666;
 }
 
@@ -1028,13 +1045,9 @@ onMounted(async () => {
 .section-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 8rpx;
   margin-bottom: 24rpx;
-}
-
-.comment-count {
-  font-size: 24rpx;
-  color: #999;
 }
 
 .comment-list {
@@ -1091,7 +1104,7 @@ onMounted(async () => {
 .comment-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   margin-bottom: 8rpx;
 }
 
@@ -1112,6 +1125,12 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
 }
 
 .reply-trigger {
@@ -1151,9 +1170,9 @@ onMounted(async () => {
   text-align: right;
 }
 
-.footer-icon {
-  width: 32rpx;
-  height: 32rpx;
+.like-icon {
+  font-size: 24rpx;
+  color: #999;
 }
 
 .reply-list {
@@ -1301,21 +1320,98 @@ onMounted(async () => {
   padding: 48rpx 0;
 }
 
-.publish-comment-btn {
-  width: 100%;
-  background: #4a6741;
-  color: #fff;
-  border-radius: 40rpx;
-  height: 80rpx;
-  line-height: 80rpx;
-  font-size: 28rpx;
-  font-weight: 600;
-  border: none;
-  margin-top: 24rpx;
+.comment-input-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
 }
 
-.publish-comment-btn::after {
-  border: none;
+.input-avatar {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-avatar.avatar-default {
+  background: #c4a882;
+}
+
+.input-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.input-avatar .avatar-text {
+  font-size: 22rpx;
+  color: #fff;
+  font-weight: 600;
+}
+
+.input-field {
+  flex: 1;
+  font-size: 26rpx;
+  color: #333;
+  min-height: 72rpx;
+  max-height: 200rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 16rpx;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+.send-btn {
+  flex-shrink: 0;
+  padding: 8rpx 0;
+  align-self: flex-end;
+}
+
+.send-btn:active {
+  opacity: 0.6;
+}
+
+.send-btn-text {
+  color: #e8a44a;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.comment-trigger {
+  width: 40%;
+  flex-shrink: 0;
+  height: 64rpx;
+  background: #f5f2ed;
+  border-radius: 36rpx;
+  display: flex;
+  align-items: center;
+  padding: 0 24rpx;
+}
+
+.comment-trigger:active {
+  opacity: 0.8;
+}
+
+.comment-trigger-bar-text {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.comment-input-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  padding: 12rpx 24rpx;
+  padding-bottom: calc(12rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
+  z-index: 100;
 }
 
 .action-bar {
@@ -1324,34 +1420,49 @@ onMounted(async () => {
   left: 0;
   right: 0;
   background: #fff;
-  padding: 16rpx 32rpx;
-  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  padding: 12rpx 12rpx;
+  padding-bottom: calc(12rpx + env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: 12rpx;
   box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
+  z-index: 100;
+}
+
+.action-btn-col {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 24rpx;
 }
 
 .action-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  min-width: 80rpx;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 .action-icon-img {
-  width: 44rpx;
-  height: 44rpx;
-  margin-bottom: 4rpx;
+  width: 48rpx;
+  height: 48rpx;
 }
 
 .action-icon-img.icon-active {
   filter: brightness(0) saturate(100%) invert(52%) sepia(82%) saturate(1463%) hue-rotate(348deg) brightness(96%) contrast(96%);
 }
 
-.icon-wrap {
-  position: relative;
-  margin-bottom: 4rpx;
+.action-icon-img.unliked {
+  filter: none;
 }
 
 .badge {
@@ -1368,44 +1479,25 @@ onMounted(async () => {
   padding: 0 6rpx;
 }
 
-.badge-text {
-  font-size: 18rpx;
-  color: #fff;
-  line-height: 1;
-}
-
-.icon-text {
-  font-size: 44rpx;
-  color: #666;
-  display: block;
-  text-align: center;
-  line-height: 1;
-  margin-bottom: 4rpx;
-}
-
-.icon-text.active {
-  color: #e64340;
-}
-
-.action-text {
-  font-size: 20rpx;
-  color: #666;
-}
-
-.action-text.text-active {
-  color: #e64340;
+.badge.badge-outline {
+  background: transparent;
+  border: none;
+  min-width: 20rpx;
+  height: auto;
+  padding: 0;
 }
 
 .action-btn {
   flex: 1;
   background: #4a6741;
   color: #fff;
-  border-radius: 40rpx;
+  border-radius: 44rpx;
   height: 72rpx;
-  line-height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 26rpx;
   border: none;
-  padding: 0 16rpx;
   margin: 0;
 }
 
@@ -1413,19 +1505,12 @@ onMounted(async () => {
   border: none;
 }
 
-.buy-btn {
-  flex: 1;
-  background: #4a6741;
-  color: #fff;
-  border-radius: 40rpx;
-  height: 72rpx;
-  line-height: 72rpx;
-  font-size: 28rpx;
-  border: none;
+.action-btn-wishlisted {
+  background: #e8a44a;
 }
 
-.buy-btn::after {
-  border: none;
+.wishlist-btn-wrap {
+  flex: 1;
 }
 
 .form-mask {
@@ -1592,6 +1677,9 @@ onMounted(async () => {
 }
 
 .reply-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 6rpx;
 }
 
