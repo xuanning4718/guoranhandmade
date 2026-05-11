@@ -138,8 +138,8 @@
       </view>
     </scroll-view>
 
-      <view v-if="!showCommentInput" class="action-bar">
-        <view class="comment-trigger" @click="focusCommentInput">
+      <view v-if="!showCommentInput" :class="['action-bar', { 'comment-enabled': commentEnabled }]" class="action-bar">
+        <view v-if="commentEnabled" class="comment-trigger" @click="focusCommentInput">
           <text class="comment-trigger-bar-text">留下你的想法吧</text>
         </view>
         <view class="action-btn-col">
@@ -451,9 +451,11 @@ async function loadData() {
     product.value = productRes.data
     creator.value = productRes.creator
 
-    const commentData = await getComments(productId.value)
-    if (commentData.data && Array.isArray(commentData.data)) {
-      comments.value = commentData.data
+    if (commentEnabled.value) {
+      const commentData = await getComments(productId.value)
+      if (commentData.data && Array.isArray(commentData.data)) {
+        comments.value = commentData.data
+      }
     }
 
     if (product.value) {
@@ -1393,6 +1395,10 @@ onUnmounted(() => {
   padding: 0 24rpx;
 }
 
+.action-bar.comment-enabled .comment-trigger {
+  width: 50%;
+}
+
 .comment-trigger:active {
   opacity: 0.8;
 }
@@ -1414,7 +1420,7 @@ onUnmounted(() => {
   z-index: 100;
 }
 
-.action-bar {
+  .action-bar {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -1432,8 +1438,14 @@ onUnmounted(() => {
 .action-btn-col {
   display: flex;
   align-items: center;
+  flex: 1;
+  justify-content: center;
+  gap: 60rpx;
+}
+
+.action-bar.comment-enabled .action-btn-col {
   justify-content: flex-start;
-  gap: 24rpx;
+  gap: 32rpx;
 }
 
 .action-item {
@@ -1488,7 +1500,7 @@ onUnmounted(() => {
 }
 
 .action-btn {
-  flex: 1;
+  width: 100%;
   background: #4a6741;
   color: #fff;
   border-radius: 44rpx;
@@ -1510,7 +1522,11 @@ onUnmounted(() => {
 }
 
 .wishlist-btn-wrap {
-  flex: 1;
+  width: 50%;
+}
+
+.action-bar.comment-enabled .wishlist-btn-wrap {
+  width: 35%;
 }
 
 .form-mask {

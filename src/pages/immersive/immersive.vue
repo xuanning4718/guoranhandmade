@@ -1,5 +1,5 @@
 <template>
-  <view v-if="productList.length > 0" class="immersive-page" :style="{ paddingTop: statusBarHeight + 'px' }">
+  <view v-if="productList.length > 0 && commentEnabled !== null" class="immersive-page" :style="{ paddingTop: statusBarHeight + 'px' }">
     <view class="top-bar">
       <view class="top-left">
         <view class="back-btn" @click.stop="goBack">
@@ -83,7 +83,7 @@
             <image class="action-icon-img" :src="favoriteStore.isProductFavorited(currentProduct.id) ? '/static/images/收藏 -已收藏.png' : '/static/images/收藏.png'" mode="aspectFit" />
             <text class="action-count">{{ currentProduct.favorites ?? 0 }}</text>
           </view>
-          <view class="action-item" @click.stop="showCommentPanel = true">
+          <view v-if="commentEnabled" class="action-item" @click.stop="showCommentPanel = true">
             <image class="action-icon-img comment-icon" src="/static/images/comment.png" mode="aspectFit" />
             <text class="action-count">{{ commentCountMap[currentProduct?.id] > 0 ? commentCountMap[currentProduct?.id] : 0 }}</text>
           </view>
@@ -97,6 +97,7 @@
     </view>
 
     <CommentPanel
+      v-if="commentEnabled"
       :visible="showCommentPanel"
       :productId="currentProduct?.id"
         @close="onCommentClose"
@@ -124,7 +125,7 @@ import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app'
 import { useSwipeContextStore } from '../../stores/swipeContext.js'
 import { useFavoriteStore } from '../../stores/favorite.js'
 import { useWishlistStore } from '../../stores/cart.js'
-import { getProductById, getCreators, getComments, updateProductStats } from '../../api/index.js'
+import { getProductById, getCreators, getComments, updateProductStats, getCommentEnabled } from '../../api/index.js'
 import { convertCloudImages } from '../../utils/cloudImage.js'
 import CommentPanel from '../../components/CommentPanel.vue'
 import SharePoster from '../../components/SharePoster.vue'
@@ -139,6 +140,7 @@ const safeBottom = ref(0)
 const currentIndex = ref(0)
 const commentCountMap = ref({})
 const showCommentPanel = ref(false)
+const commentEnabled = ref(null)
 const showSharePoster = ref(false)
 const imageAutoplay = ref(true)
 const imageCurrentIndex = ref({})
@@ -368,6 +370,7 @@ async function loadCreator(creatorId) {
 }
 
 async function loadComments(productId) {
+  if (!commentEnabled.value) return
   try {
     const res = await getComments(productId)
     if (res.data && Array.isArray(res.data)) {
@@ -430,6 +433,9 @@ onMounted(async () => {
   const topBarH = (sysInfo.statusBarHeight || 0) + 48
   const bottomBarH = 280
   mainHeight.value = sysInfo.windowHeight - topBarH - bottomBarH - statusBarHeight.value
+
+  const commentRes = await getCommentEnabled()
+  commentEnabled.value = commentRes.data
 
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
@@ -717,13 +723,15 @@ onUnmounted(() => {
   align-items: center;
   gap: 8rpx;
   margin-left: 4rpx;
+  padding-right: 12rpx;
 }
 
 .action-btn-col {
   display: flex;
   align-items: center;
   flex: 1;
-  justify-content: space-around;
+  justify-content: center;
+  gap: 80rpx;
 }
 
 .action-item {
@@ -748,7 +756,7 @@ onUnmounted(() => {
 
 .wishlist-btn {
   flex-shrink: 0;
-  width: 38%;
+  width: 50%;
   background: #4a6741;
   border-radius: 44rpx;
   height: 64rpx;
@@ -757,7 +765,6 @@ onUnmounted(() => {
   justify-content: center;
   gap: 8rpx;
   margin-left: 8rpx;
-  margin-right: 24rpx;
 }
 
 .wishlist-btn:active {

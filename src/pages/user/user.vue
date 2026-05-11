@@ -1,21 +1,21 @@
 <template>
-  <view class="user-page">
+  <view class="user-page" v-if="commentEnabled !== null">
     <view class="user-header" @click="showEditForm">
       <view class="user-info">
         <view class="user-avatar">
-          <image v-if="userInfo.avatar" class="user-avatar-img" :src="userInfo.avatar" mode="aspectFill" />
-          <text v-else class="avatar-text">{{ userInfo.nickName?.charAt(0) || '我' }}</text>
-          <view class="avatar-edit-hint">
+          <image v-if="userInfo.avatar && commentEnabled" class="user-avatar-img" :src="userInfo.avatar" mode="aspectFill" />
+          <text v-else class="avatar-text">{{ displayNickName.charAt(0) }}</text>
+          <view v-if="commentEnabled && userInfo.nickName" class="avatar-edit-hint">
             <text class="edit-icon">✎</text>
           </view>
         </view>
         <view class="user-detail">
-          <text class="user-name">{{ userInfo.nickName || '点击设置昵称' }}</text>
-          <text v-if="!userInfo.nickName" class="user-desc">设置头像和昵称后即可发表评价</text>
+          <text class="user-name">{{ displayNickName }}</text>
+          <text v-if="commentEnabled && !userInfo.nickName" class="user-desc">设置头像和昵称后即可发表评价</text>
         </view>
       </view>
 
-      <view v-if="userInfo.nickName" class="user-stats">
+      <view v-if="commentEnabled ? userInfo.nickName : true" class="user-stats">
         <view class="stat-item" @tap.stop="goTab('wishlist')">
           <text class="stat-num">{{ wishlistStore.totalCount }}</text>
           <text class="stat-label">意愿</text>
@@ -31,7 +31,7 @@
       </view>
     </view>
 
-    <view v-if="userInfo.nickName" class="section">
+    <view v-if="commentEnabled ? userInfo.nickName : true" class="section">
       <view class="section-title">我的收藏</view>
       <view v-if="favoriteProducts.length > 0" class="favorites-grid">
         <ProductCard
@@ -49,7 +49,7 @@
       </view>
     </view>
 
-    <view v-if="userInfo.nickName" class="section">
+    <view v-if="commentEnabled ? userInfo.nickName : true" class="section">
       <view class="section-title">我关注的创作者</view>
       <view v-if="favoriteCreators.length > 0" class="favorites-creators">
         <CreatorCard
@@ -64,7 +64,7 @@
       </view>
     </view>
 
-    <view v-if="showForm" class="form-mask" @click="closeForm">
+    <view v-if="showForm && commentEnabled" class="form-mask" @click="closeForm">
       <view class="form-panel" @click.stop>
         <view class="form-header">
           <text class="form-title">编辑资料</text>
@@ -103,7 +103,7 @@ import ProductCard from '../../components/ProductCard.vue'
 import CreatorCard from '../../components/CreatorCard.vue'
 import { useFavoriteStore } from '../../stores/favorite.js'
 import { useWishlistStore } from '../../stores/cart.js'
-import { getProducts, getCreators } from '../../api/index.js'
+import { getProducts, getCreators, getCommentEnabled } from '../../api/index.js'
 import { login, getUserInfo, updateProfile, uploadAvatarToCloud } from '../../services/auth.js'
 
 const favoriteStore = useFavoriteStore()
@@ -115,6 +115,7 @@ const userInfo = ref({ nickName: '', avatar: '', openId: '' })
 const showForm = ref(false)
 const tempAvatar = ref('')
 const tempNickname = ref('')
+const commentEnabled = ref(null)
 
 function onChooseAvatar(e) {
   tempAvatar.value = e.detail.avatarUrl
@@ -177,6 +178,9 @@ onMounted(async () => {
 
   userInfo.value = getUserInfo()
 
+  const commentRes = await getCommentEnabled()
+  commentEnabled.value = commentRes.data
+
   const [products, creators] = await Promise.all([
     getProducts(),
     getCreators()
@@ -192,7 +196,13 @@ const favoriteCreators = computed(() =>
   allCreators.value.filter(c => favoriteStore.favoriteCreators.includes(c.id))
 )
 
+const displayNickName = computed(() => {
+  if (!commentEnabled.value) return '手作爱好者'
+  return userInfo.value.nickName || '点击设置昵称'
+})
+
 function showEditForm() {
+  if (!commentEnabled.value) return
   showForm.value = true
   tempAvatar.value = ''
   tempNickname.value = ''
